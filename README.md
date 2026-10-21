@@ -121,3 +121,14 @@ The CC profile is capped at 24 V/5 A/50 W and 30 seconds; it preserves input/OFF
 readback and raw TX/RX evidence. TCP loss leaves instrument state unknown even
 after OFF was sent. Protocol-double tests do not establish electrical shutdown.
 See [commands, limits and physical acceptance](docs/sdl1020xe.md) before use.
+
+## SIGLENT SDS804X HD oscilloscope
+
+Version 0.3.0 adds `scope plan`, `scope inspect-plan`, `scope run` and `scope inspect`:
+exact-identity LAN access, stopped waveform download or bounded SINGLE acquisition,
+and C1-C4 WORD/LSB waveform data with probe-aware voltage/time conversion. Each
+session saves native binary replies, descriptor, CSV, statistics and cleanup.
+Offline inspect replays the native evidence without instrument access. There is
+no per-capture confirmation prompt. Current verification uses TCP protocol doubles;
+physical SDS804X HD behavior and measurement accuracy await the instrument.
+See [SDS804X HD workflow and limits](docs/sds804x.md).

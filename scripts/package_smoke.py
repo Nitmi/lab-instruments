@@ -15,6 +15,7 @@ import zipfile
 from pathlib import Path
 
 from load_smoke import verify as verify_load
+from scope_smoke import verify as verify_scope
 
 
 def main():
@@ -152,6 +153,8 @@ def main():
         assert not inspected["hardware_access"]
     load_smoke = verify_load(run, cli, root)
     assert load_smoke["ok"]
+    scope_smoke = verify_scope(run, cli, root)
+    assert scope_smoke["ok"]
     verified = 0
     with zipfile.ZipFile(wheel) as archive:
         for name in archive.namelist():
@@ -166,6 +169,7 @@ def main():
         "identity": identity,
         "package_files_verified": verified,
         "commands": commands,
+        "scope_sessions": scope_smoke["sessions"],
         "hardware_access": False,
         "native_sdk_verified": False,
         "physical_device_verified": False,

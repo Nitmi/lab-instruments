@@ -4,7 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import __version__, sdl, sdl_plan
+from . import __version__, sdl, sdl_plan, sds, sds_plan
 from .capture import inspect_capture, load_plan, supervise
 from .common import LabError, encode, read, write_new
 from .dwf import Dwf
@@ -12,7 +12,7 @@ from .plan import MODEL, SDK_VERSION, create
 
 
 def parser():
-    root = argparse.ArgumentParser(description="Bounded AD3 acquisition and SDL1020X-E sessions.")
+    root = argparse.ArgumentParser(description="Bounded AD3, SDL1020X-E and SDS804X HD sessions.")
     root.add_argument("--version", action="version", version="lab-instruments " + __version__)
     commands = root.add_subparsers(dest="command", required=True)
     doctor = commands.add_parser("doctor", help="host-only static readiness; never loads SDK")
@@ -88,6 +88,39 @@ def parser():
     load_run.add_argument("--sha256", required=True)
     load_run.add_argument("--output", type=Path, required=True)
     load_run.add_argument("--json", action="store_true")
+    scope = commands.add_parser(
+        "scope", help="SDS804X HD: exact-identity WORD waveform acquisition"
+    )
+    scope_ops = scope.add_subparsers(dest="operation", required=True)
+    scope_plan = scope_ops.add_parser("plan", help="offline plan; no network access")
+    scope_plan.add_argument("--host", required=True)
+    scope_plan.add_argument("--port", type=int, default=5025)
+    scope_plan.add_argument("--serial")
+    scope_plan.add_argument("--firmware-version", dest="firmware")
+    scope_plan.add_argument(
+        "--action", choices=("identify", "stopped", "single"), default="stopped"
+    )
+    scope_plan.add_argument("--channels", type=int, nargs="+", default=[1])
+    scope_plan.add_argument("--points", type=int, default=4096)
+    scope_plan.add_argument("--io-timeout-ms", type=int, default=2000)
+    scope_plan.add_argument("--timeout-ms", type=int, default=15000)
+    scope_plan.add_argument(
+        "--test-double", action="store_true", help="127.0.0.1 only; synthetic evidence"
+    )
+    scope_plan.add_argument("--output", type=Path, required=True)
+    scope_plan.add_argument("--json", action="store_true")
+    for operation in ("inspect-plan", "inspect"):
+        check = scope_ops.add_parser(operation)
+        check.add_argument("input", type=Path)
+        check.add_argument("--sha256", required=True)
+        check.add_argument("--json", action="store_true")
+    scope_run = scope_ops.add_parser(
+        "run", help="one owned worker/socket; no reconnects or retries"
+    )
+    scope_run.add_argument("--plan", type=Path, required=True)
+    scope_run.add_argument("--sha256", required=True)
+    scope_run.add_argument("--output", type=Path, required=True)
+    scope_run.add_argument("--json", action="store_true")
     return root
 
 
@@ -124,6 +157,33 @@ def main(argv=None):
             data = {"devices": sdk.enumerate(), "sdk": ref, "sdk_version": sdk.version}
         elif args.command == "inspect":
             data = inspect_capture(args.input, args.sha256)
+        elif args.command == "scope":
+            if args.operation == "plan":
+                keys = (
+                    "host",
+                    "port",
+                    "serial",
+                    "firmware",
+                    "action",
+                    "channels",
+                    "points",
+                    "io_timeout_ms",
+                    "timeout_ms",
+                    "test_double",
+                )
+                plan = sds_plan.create(**{key: getattr(args, key) for key in keys})
+                data = {"plan": plan, "output": write_new(args.output, encode(plan))}
+            elif args.operation == "inspect-plan":
+                plan, _, ref = sds.load_plan(args.input, args.sha256)
+                data = {"plan": plan, "input": ref}
+            elif args.operation == "inspect":
+                data = sds.inspect(args.input, args.sha256)
+            else:
+                captured, ref = sds.run(args.plan, args.sha256, args.output)
+                data = {"session": captured, "output": ref}
+                result["hardware_access"] = captured["hardware_access"]
+                result["executables_started"] = True
+                code = 0 if captured["ok"] else 3
         elif args.command == "load":
             if args.operation == "plan":
                 keys = (
@@ -187,6 +247,9 @@ def main(argv=None):
             code = 0 if captured["ok"] else 3
         result.update(ok=code == 0, data=data)
     except (LabError, OSError, ValueError, KeyError, TypeError, RecursionError) as error:
+        if getattr(error, "code", "") == "WORKER_FAILED":
+            result["executables_started"] = True
+            result["hardware_access"] = None
         result.update(
             ok=False,
             error={

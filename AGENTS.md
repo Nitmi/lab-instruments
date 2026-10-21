@@ -12,8 +12,16 @@
   real equipment and a physical test scope are available.
 - Default doctor, plan and saved-evidence inspection must not load a vendor
   library, enumerate hardware, use network or start another executable.
-- Hardware paths require an explicit absolute SDK library path/hash and exact
-  serial/model selection. No first-device fallback or retries.
+- The SDS804X HD adapter owns one literal IPv4 SCPI socket. Its stopped-waveform
+  and single-trigger modes require an already stopped normal YT, non-sequence
+  acquisition and enabled analog inputs. WORD/LSB transfer configuration and
+  SINGLE/timeout STOP are explicit plan effects. Never add RUN, forced trigger,
+  autoset, reset, analog reconfiguration or output commands as implicit setup.
+  Keep partial binary evidence; no SCPI after desynchronization. Test only local
+  protocol doubles until an explicit physical test is requested.
+- AD3 hardware paths require an explicit absolute SDK library path/hash. All
+  instrument paths require exact serial/model selection. No first-device
+  fallback or retries; SCPI adapters do not require an SDK.
 - Use one owned handle, bounded single acquisitions, capability/readback checks,
   exclusive new output, a worker watchdog, and explicit cleanup evidence.
 - Test doubles and sample files never prove vendor ABI or physical measurements.
