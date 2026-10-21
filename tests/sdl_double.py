@@ -8,8 +8,9 @@ import time
 
 
 class SdlDouble:
-    def __init__(self, fault=None):
+    def __init__(self, fault=None, *, serial="SYNTHETIC123"):
         self.fault = fault
+        self.serial = serial
         self.commands = []
         self.raw_received = bytearray()
         self.errors = []
@@ -39,7 +40,7 @@ class SdlDouble:
 
     def response(self, command):
         if command == "*IDN?":
-            return "Siglent Technologies,SDL1020X-E,SYNTHETIC123,1.1.1.23R4"
+            return f"Siglent Technologies,SDL1020X-E,{self.serial},1.1.1.23R4"
         if command == ":SOUR:INP:STAT ON":
             self.on = True
         elif command == ":SOUR:INP:STAT OFF":

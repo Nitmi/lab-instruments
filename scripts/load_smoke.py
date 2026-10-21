@@ -16,6 +16,8 @@ def verify(run, cli, root):
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     records = []
+    # Independent synthetic serials avoid competing for another test's lease.
+    serial = "SYNTHETIC" + hashlib.sha256(str(root).encode()).hexdigest()[:12].upper()
     for action, fault, expected in (
         ("identify", None, 0),
         ("observe", None, 0),
@@ -25,7 +27,7 @@ def verify(run, cli, root):
         ("cc", module.stalled_loaded_measurement, 3),
     ):
         name = f"load-{len(records)}-{action}"
-        with module.SdlDouble(fault) as server:
+        with module.SdlDouble(fault, serial=serial) as server:
             plan_path = root / (name + ".json")
             arguments = [
                 *cli,
@@ -49,7 +51,7 @@ def verify(run, cli, root):
                 "--json",
             ]
             if action != "identify":
-                arguments.extend(["--serial", "SYNTHETIC123", "--firmware-version", "1.1.1.23R4"])
+                arguments.extend(["--serial", serial, "--firmware-version", "1.1.1.23R4"])
             if action == "cc":
                 arguments.extend(["--current-a", "0.100"])
             plan = json.loads(run(name + "-plan", arguments))
