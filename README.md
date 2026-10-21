@@ -1,11 +1,13 @@
 # Lab Instruments
 
-An instrument CLI for embedded agents. The first adapter targets **Digilent
-Analog Discovery 3** on 64-bit Windows with **WaveForms SDK 3.25.1**.
+An instrument CLI for embedded agents. It supports **Digilent Analog Discovery 3**
+input acquisition on Windows x64 with **WaveForms SDK 3.25.1**, and bounded
+**SIGLENT SDL1020X-E** electronic load sessions over SCPI TCP.
 
 Status: local software candidate, **not yet tested with a vendor DLL or real
 instrument**. This repository includes a real C ABI acquisition path and tests
-against an explicit C ABI test double. Neither those tests nor another project's
+against an explicit C ABI test double and SDL protocol tests over local TCP.
+Neither those tests nor another project's
 hardware reports establish that this adapter works on your AD3. Runtime code
 uses only Python's standard library. The vendor SDK/Adept runtime is separate.
 
@@ -17,7 +19,7 @@ uses only Python's standard library. The vendor SDK/Adept runtime is separate.
 - A separate worker, host watchdog, input stop and exact owned-handle close evidence.
 - Offline sample inspection and voltage/transition summaries without reopening devices.
 
-The input-only API has no supply, AWG, pattern, DIO drive, generic SDK call,
+The AD3 input-only API has no supply, AWG, pattern, DIO drive, generic SDK call,
 device reset or close-all operations. SDK device opening may initialize its FPGA
 and hardware; this is not a zero-effect connection. Use an AD3 dedicated to the
 test and the vendor's input/wiring limits. The adapter does not verify the DUT,
@@ -106,5 +108,16 @@ uv build --no-build-isolation --python .venv --out-dir '<new-dist-directory>'
 ```
 
 No real-device test runs automatically. See [selection and sources](docs/ad3-selection.md)
-and [hardware acceptance](docs/hardware-acceptance.md). Electronic load, thermal
-camera, protocol decoders, output control and MCP integration are later stages.
+and [hardware acceptance](docs/hardware-acceptance.md). Thermal cameras,
+protocol decoders, AD3 output control and MCP integration are later stages.
+
+## SDL1020X-E electronic load
+
+Version 0.2.0 adds typed `load plan`, `load inspect-plan`, `load run` and `load inspect`
+for identity-only, query-only observation, bounded static CC and explicit input OFF.
+Plans are offline; runs use one literal IPv4 address, exact serial/firmware, one
+connection and no retries. There is no interactive confirmation before each run.
+The CC profile is capped at 24 V/5 A/50 W and 30 seconds; it preserves input/OFF
+readback and raw TX/RX evidence. TCP loss leaves instrument state unknown even
+after OFF was sent. Protocol-double tests do not establish electrical shutdown.
+See [commands, limits and physical acceptance](docs/sdl1020xe.md) before use.

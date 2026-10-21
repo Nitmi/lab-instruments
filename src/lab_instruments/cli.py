@@ -4,7 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import __version__
+from . import __version__, sdl, sdl_plan
 from .capture import inspect_capture, load_plan, supervise
 from .common import LabError, encode, read, write_new
 from .dwf import Dwf
@@ -12,7 +12,7 @@ from .plan import MODEL, SDK_VERSION, create
 
 
 def parser():
-    root = argparse.ArgumentParser(description="Bounded Digilent AD3 input acquisition.")
+    root = argparse.ArgumentParser(description="Bounded AD3 acquisition and SDL1020X-E sessions.")
     root.add_argument("--version", action="version", version="lab-instruments " + __version__)
     commands = root.add_subparsers(dest="command", required=True)
     doctor = commands.add_parser("doctor", help="host-only static readiness; never loads SDK")
@@ -50,6 +50,44 @@ def parser():
     inspect.add_argument("input", type=Path)
     inspect.add_argument("--sha256", required=True)
     inspect.add_argument("--json", action="store_true")
+    load = commands.add_parser(
+        "load", help="SDL1020X-E: offline plan or bounded exact-identity session"
+    )
+    load_ops = load.add_subparsers(dest="operation", required=True)
+    load_plan = load_ops.add_parser("plan", help="host-only plan, no TCP connection")
+    load_plan.add_argument("--host", required=True)
+    load_plan.add_argument("--port", type=int, default=5025)
+    load_plan.add_argument("--serial")
+    load_plan.add_argument("--firmware-version", dest="firmware")
+    load_plan.add_argument(
+        "--action", choices=("identify", "observe", "cc", "off"), default="observe"
+    )
+    load_plan.add_argument("--current-a", type=float)
+    load_plan.add_argument("--min-voltage-v", type=float, default=0.0)
+    load_plan.add_argument("--max-voltage-v", type=float, default=24.0)
+    load_plan.add_argument("--max-current-a", type=float, default=1.0)
+    load_plan.add_argument("--max-power-w", type=float, default=20.0)
+    load_plan.add_argument("--samples", type=int, default=5)
+    load_plan.add_argument("--interval-ms", type=int, default=200)
+    load_plan.add_argument("--io-timeout-ms", type=int, default=1000)
+    load_plan.add_argument("--timeout-ms", type=int, default=15000)
+    load_plan.add_argument(
+        "--test-double", action="store_true", help="only 127.0.0.1; synthetic evidence"
+    )
+    load_plan.add_argument("--output", type=Path, required=True)
+    load_plan.add_argument("--json", action="store_true")
+    for operation in ("inspect-plan", "inspect"):
+        check = load_ops.add_parser(operation)
+        check.add_argument("input", type=Path)
+        check.add_argument("--sha256", required=True)
+        check.add_argument("--json", action="store_true")
+    load_run = load_ops.add_parser(
+        "run", help="one TCP session; no confirmations/reconnects/retries"
+    )
+    load_run.add_argument("--plan", type=Path, required=True)
+    load_run.add_argument("--sha256", required=True)
+    load_run.add_argument("--output", type=Path, required=True)
+    load_run.add_argument("--json", action="store_true")
     return root
 
 
@@ -86,6 +124,40 @@ def main(argv=None):
             data = {"devices": sdk.enumerate(), "sdk": ref, "sdk_version": sdk.version}
         elif args.command == "inspect":
             data = inspect_capture(args.input, args.sha256)
+        elif args.command == "load":
+            if args.operation == "plan":
+                keys = (
+                    "host",
+                    "serial",
+                    "firmware",
+                    "action",
+                    "port",
+                    "current_a",
+                    "min_voltage_v",
+                    "max_voltage_v",
+                    "max_current_a",
+                    "max_power_w",
+                    "samples",
+                    "interval_ms",
+                    "io_timeout_ms",
+                    "timeout_ms",
+                    "test_double",
+                )
+                plan = sdl_plan.create(**{key: getattr(args, key) for key in keys})
+                data = {"plan": plan, "output": write_new(args.output, encode(plan))}
+            elif args.operation == "inspect-plan":
+                plan, _, ref = sdl.load_plan(args.input, args.sha256)
+                data = {"plan": plan, "input": ref}
+            elif args.operation == "inspect":
+                data = sdl.inspect(args.input, args.sha256)
+            else:
+                captured, ref = sdl.run(args.plan, args.sha256, args.output)
+                data = {"session": captured, "output": ref}
+                result["hardware_access"] = captured["hardware_access"]
+                result["outputs_commanded"] = (
+                    captured["input_enable_attempted"] and not captured["plan"]["test_double"]
+                )
+                code = 0 if captured["ok"] else 3
         elif args.operation == "plan":
             plan = create(
                 **{

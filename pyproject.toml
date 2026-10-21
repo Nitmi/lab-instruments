@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lab-instruments"
-version = "0.1.0"
-description = "Bounded instrument acquisition for embedded agents, starting with Digilent AD3"
+version = "0.2.0"
+description = "Bounded AD3 acquisition and SDL1020X-E electronic load control for embedded agents"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

@@ -14,6 +14,8 @@ import tomllib
 import zipfile
 from pathlib import Path
 
+from load_smoke import verify as verify_load
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -148,6 +150,8 @@ def main():
             run("inspect-" + instrument, [*cli, "inspect", str(path), "--sha256", sha, "--json"])
         )
         assert not inspected["hardware_access"]
+    load_smoke = verify_load(run, cli, root)
+    assert load_smoke["ok"]
     verified = 0
     with zipfile.ZipFile(wheel) as archive:
         for name in archive.namelist():
