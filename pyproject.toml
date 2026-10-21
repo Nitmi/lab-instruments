@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lab-instruments"
-version = "0.3.0"
-description = "Bounded AD3, SDS804X HD oscilloscope and SDL1020X-E load operations for embedded agents"
+version = "0.4.0"
+description = "Bounded instrument acquisition, electronic loads and radiometric thermal evidence for agents"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

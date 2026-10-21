@@ -4,7 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import __version__, sdl, sdl_plan, sds, sds_plan
+from . import __version__, sdl, sdl_plan, sds, sds_plan, thermal, thermal_plan
 from .capture import inspect_capture, load_plan, supervise
 from .common import LabError, encode, read, write_new
 from .dwf import Dwf
@@ -121,6 +121,47 @@ def parser():
     scope_run.add_argument("--sha256", required=True)
     scope_run.add_argument("--output", type=Path, required=True)
     scope_run.add_argument("--json", action="store_true")
+    camera = commands.add_parser(
+        "thermal", help="PureThermal/Lepton: bounded Y16 capture and offline ROI analysis"
+    )
+    camera_ops = camera.add_subparsers(dest="operation", required=True)
+    camera_plan = camera_ops.add_parser("plan", help="host-only request; no camera discovery")
+    camera_plan.add_argument("--link")
+    camera_plan.add_argument("--serial-hex", dest="serial")
+    camera_plan.add_argument("--software-hex", dest="software")
+    camera_plan.add_argument(
+        "--action", choices=("devices", "identify", "capture"), default="capture"
+    )
+    camera_plan.add_argument("--buffers", type=int, default=3)
+    camera_plan.add_argument(
+        "--roi", action="append", nargs=5, metavar=("NAME", "X", "Y", "WIDTH", "HEIGHT")
+    )
+    camera_plan.add_argument("--distance-m", type=float)
+    camera_plan.add_argument("--ambient-c", type=float)
+    camera_plan.add_argument("--timeout-ms", type=int, default=15000)
+    camera_plan.add_argument("--test-double", action="store_true")
+    camera_plan.add_argument("--output", type=Path, required=True)
+    camera_plan.add_argument("--json", action="store_true")
+    for operation in ("inspect-plan", "inspect"):
+        check = camera_ops.add_parser(operation)
+        check.add_argument("input", type=Path)
+        check.add_argument("--sha256", required=True)
+        check.add_argument("--json", action="store_true")
+    camera_run = camera_ops.add_parser(
+        "run", help="exact Windows helper; no prompts/retries/driver changes"
+    )
+    camera_run.add_argument("--helper", type=Path, required=True)
+    camera_run.add_argument("--helper-sha256", required=True)
+    camera_import = camera_ops.add_parser(
+        "import", help="host-only evaluation of hash-bound saved thermal source"
+    )
+    camera_import.add_argument("--input", type=Path, required=True)
+    camera_import.add_argument("--sha256", required=True)
+    for command in (camera_run, camera_import):
+        command.add_argument("--plan", type=Path, required=True)
+        command.add_argument("--plan-sha256", required=True)
+        command.add_argument("--output", type=Path, required=True)
+        command.add_argument("--json", action="store_true")
     return root
 
 
@@ -157,6 +198,54 @@ def main(argv=None):
             data = {"devices": sdk.enumerate(), "sdk": ref, "sdk_version": sdk.version}
         elif args.command == "inspect":
             data = inspect_capture(args.input, args.sha256)
+        elif args.command == "thermal":
+            if args.operation == "plan":
+                keys = (
+                    "link",
+                    "serial",
+                    "software",
+                    "action",
+                    "buffers",
+                    "distance_m",
+                    "ambient_c",
+                    "timeout_ms",
+                    "test_double",
+                )
+                rois = (
+                    None
+                    if args.roi is None
+                    else [
+                        dict(
+                            zip(
+                                ("name", "x", "y", "width", "height"),
+                                [roi[0], *map(int, roi[1:])],
+                                strict=True,
+                            )
+                        )
+                        for roi in args.roi
+                    ]
+                )
+                plan = thermal_plan.create(**{key: getattr(args, key) for key in keys}, rois=rois)
+                data = {"plan": plan, "output": write_new(args.output, encode(plan))}
+            elif args.operation == "inspect-plan":
+                plan, _, ref = thermal.load_plan(args.input, args.sha256)
+                data = {"plan": plan, "input": ref}
+            elif args.operation == "inspect":
+                data = thermal.inspect(args.input, args.sha256)
+            else:
+                captured, ref = (
+                    thermal.run(
+                        args.plan, args.plan_sha256, args.helper, args.helper_sha256, args.output
+                    )
+                    if args.operation == "run"
+                    else thermal.import_source(
+                        args.input, args.sha256, args.plan, args.plan_sha256, args.output
+                    )
+                )
+                data = {"session": captured, "output": ref}
+                result["hardware_access"] = captured["hardware_access"]
+                result["executables_started"] = captured["executables_started"]
+                code = 0 if captured["ok"] else 3
         elif args.command == "scope":
             if args.operation == "plan":
                 keys = (

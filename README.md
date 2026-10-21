@@ -108,8 +108,8 @@ uv build --no-build-isolation --python .venv --out-dir '<new-dist-directory>'
 ```
 
 No real-device test runs automatically. See [selection and sources](docs/ad3-selection.md)
-and [hardware acceptance](docs/hardware-acceptance.md). Thermal cameras,
-protocol decoders, AD3 output control and MCP integration are later stages.
+and [hardware acceptance](docs/hardware-acceptance.md). Protocol decoders,
+AD3 output control and MCP integration are later stages.
 
 ## SDL1020X-E electronic load
 
@@ -132,3 +132,13 @@ Offline inspect replays the native evidence without instrument access. There is
 no per-capture confirmation prompt. Current verification uses TCP protocol doubles;
 physical SDS804X HD behavior and measurement accuracy await the instrument.
 See [SDS804X HD workflow and limits](docs/sds804x.md).
+
+## PureThermal 3 / Lepton 3.5 radiometric camera
+
+Version 0.4.0 adds typed `thermal plan`, `inspect-plan`, `run`, `import` and `inspect`.
+A separate hash-bound Windows x64 Media Foundation helper captures native Y16;
+Python verifies raw GET state and matching telemetry before calculating apparent
+surface temperatures, ROI/hotspots and temperature deltas. Saved evidence can be
+evaluated offline without starting the helper. The native helper is built and
+tested using its explicit synthetic backend; physical camera/UVC behavior and
+measurement accuracy are pending. See [workflow, effects and limits](docs/purethermal3.md).

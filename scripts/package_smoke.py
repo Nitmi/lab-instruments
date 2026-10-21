@@ -16,12 +16,14 @@ from pathlib import Path
 
 from load_smoke import verify as verify_load
 from scope_smoke import verify as verify_scope
+from thermal_smoke import verify as verify_thermal
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dist-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--thermal-helper", type=Path)
     args = parser.parse_args()
     wheels = list(args.dist_dir.glob("*.whl"))
     assert len(wheels) == 1
@@ -35,14 +37,14 @@ def main():
     environment.pop("PYTHONHOME", None)
     commands = []
 
-    def run(label, command, expected=0):
+    def run(label, command, expected=0, extra_env=None):
         completed = subprocess.run(
             command,
             capture_output=True,
             encoding="utf-8",
             check=False,
             cwd=root,
-            env=environment,
+            env={**environment, **(extra_env or {})},
             timeout=60,
         )
         (root / (label + ".stdout")).write_text(completed.stdout, encoding="utf-8")
@@ -155,6 +157,8 @@ def main():
     assert load_smoke["ok"]
     scope_smoke = verify_scope(run, cli, root)
     assert scope_smoke["ok"]
+    thermal_smoke = verify_thermal(run, cli, root, args.thermal_helper)
+    assert thermal_smoke["ok"]
     verified = 0
     with zipfile.ZipFile(wheel) as archive:
         for name in archive.namelist():
@@ -170,6 +174,8 @@ def main():
         "package_files_verified": verified,
         "commands": commands,
         "scope_sessions": scope_smoke["sessions"],
+        "thermal_native_test_sessions": thermal_smoke["native_test_sessions"],
+        "thermal_saved_imports": thermal_smoke["saved_imports"],
         "hardware_access": False,
         "native_sdk_verified": False,
         "physical_device_verified": False,

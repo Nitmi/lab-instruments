@@ -22,6 +22,14 @@
 - AD3 hardware paths require an explicit absolute SDK library path/hash. All
   instrument paths require exact serial/model selection. No first-device
   fallback or retries; SCPI adapters do not require an SDK.
+- PureThermal capture uses one hash-bound x64 helper and one exact Windows camera
+  symbolic link, then checks Lepton part/serial/software before starting Y16.
+  Capture may change sensor AGC/telemetry/video configuration through firmware
+  negotiation. No UVC SET, explicit FFC, reset or firmware update is exposed.
+  Temperature conversion requires both GET readbacks and matching frame telemetry;
+  Y16 alone is never proof of TLinear. Keep raw frames, invalid pixels, metadata,
+  partial evidence and unknown cleanup. Use only the explicit synthetic backend
+  and saved-frame fixtures until a physical camera test is requested.
 - Use one owned handle, bounded single acquisitions, capability/readback checks,
   exclusive new output, a worker watchdog, and explicit cleanup evidence.
 - Test doubles and sample files never prove vendor ABI or physical measurements.
