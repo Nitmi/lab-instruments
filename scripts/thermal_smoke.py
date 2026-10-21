@@ -5,10 +5,46 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import tempfile
+import time
+from contextlib import contextmanager
 from pathlib import Path
 
 
+@contextmanager
+def synthetic_camera_owner():
+    # This backend intentionally has one fixed virtual camera identity. Serialize
+    # independent cold-install harnesses before they acquire the product lease.
+    with (Path(tempfile.gettempdir()) / "lab-pt3-smoke-owner.lock").open("a+b") as stream:
+        if stream.seek(0, 2) == 0:
+            stream.write(b"0")
+            stream.flush()
+        deadline = time.monotonic() + 40
+        while True:
+            try:
+                stream.seek(0)
+                if os.name == "nt":
+                    import msvcrt
+
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError:
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("synthetic camera acceptance harness is busy") from None
+                time.sleep(0.05)
+        yield
+
+
 def verify(run, cli, root, helper=None):
+    with synthetic_camera_owner():
+        return verify_owned(run, cli, root, helper)
+
+
+def verify_owned(run, cli, root, helper=None):
     # Generate fixtures using the source implementation in a separate child; the
     # installed CLI itself imports only its wheel, never the source checkout.
     source = Path(__file__).resolve().parents[1]
