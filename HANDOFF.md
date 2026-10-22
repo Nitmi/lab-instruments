@@ -43,3 +43,9 @@ without the corresponding task scope.
   SDS baseline for an offline tamper case; the old assertion truncated the error
   and the old artifact list omitted pytest outputs. Preserve the complete result
   and evidence to diagnose it; do not weaken assertions or add capture retries.
+- Saved SDS tamper checks now use private byte copies of one fully verified
+  synthetic baseline, acquired once with the normal 2 s I/O budget. Reacquiring
+  for every file mutation under the transport-fault fixture's 150 ms budget
+  made unrelated file-integrity tests depend on hosted I/O timing. Dedicated
+  transport/deadline tests keep their live peer and short budgets; no runtime
+  timeout, gate, command or retry policy changes.

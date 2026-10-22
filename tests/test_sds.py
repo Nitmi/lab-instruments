@@ -13,7 +13,7 @@ from lab_instruments.sds_wave import TIMEBASE, decode
 from lab_instruments.sds_wire import Tcp, split_block
 
 
-def plan(server, **kwargs):
+def plan(server, *, io_timeout_ms=150, **kwargs):
     return sds_plan.create(
         "127.0.0.1",
         server.serial,
@@ -21,7 +21,7 @@ def plan(server, **kwargs):
         port=server.port,
         points=16,
         test_double=True,
-        io_timeout_ms=150,
+        io_timeout_ms=io_timeout_ms,
         **kwargs,
     )
 
@@ -242,12 +242,25 @@ def test_desync_after_single_does_not_send_cleanup(tmp_path):
         assert server.commands[-1] == ":TRIG:MODE?"
 
 
-@pytest.mark.parametrize("tamper", ["csv", "words", "summary", "wire", "extra-command"])
-def test_saved_tamper_rejected(tmp_path, tamper):
+@pytest.fixture(scope="module")
+def saved_scope_files(tmp_path_factory):
+    directory = tmp_path_factory.mktemp("saved-scope-baseline")
     with SdsDouble() as server:
-        result = perform(tmp_path, plan(server))
+        # These cases test saved bytes, not a 150 ms transport deadline. Acquire
+        # one fully checked baseline using the adapter's normal 2 s I/O budget;
+        # each mutation below receives its own immutable-input copy. Dedicated
+        # transport/fault cases retain their shorter budgets and live peer.
+        result = perform(directory, plan(server, io_timeout_ms=2000))
         assert result["ok"], json.dumps(result, ensure_ascii=True)
+    return {path.name: path.read_bytes() for path in directory.iterdir() if path.is_file()}
+
+
+@pytest.mark.parametrize("tamper", ["csv", "words", "summary", "wire", "extra-command"])
+def test_saved_tamper_rejected(tmp_path, tamper, saved_scope_files):
+    for name, data in saved_scope_files.items():
+        (tmp_path / name).write_bytes(data)
     path = tmp_path / "scope-result.json"
+    result = json.loads(path.read_bytes())
     if tamper == "csv":
         (tmp_path / "c1-samples.csv").write_bytes(b"fabricated\n")
     elif tamper == "words":
