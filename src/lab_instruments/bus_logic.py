@@ -32,8 +32,12 @@ def _base(base, mapping):
 
 
 def i2c(path, sha256, scl, sda, *, min_phase_samples=2):
-    integer(min_phase_samples, "minimum phase samples", 2, 64)
     signals, base = load_channels(path, sha256, [scl, sda])
+    return i2c_samples(signals, base, scl, sda, min_phase_samples=min_phase_samples)
+
+
+def i2c_samples(signals, base, scl, sda, *, min_phase_samples=2):
+    integer(min_phase_samples, "minimum phase samples", 2, 64)
     clock, data = signals[scl], signals[sda]
     base = _base(base, {"scl": scl, "sda": sda})
     records = Records()
@@ -194,6 +198,38 @@ def spi(
     cs_active="low",
     min_phase_samples=2,
 ):
+    directions = {k: v for k, v in (("mosi", mosi), ("miso", miso)) if v is not None}
+    require(bool(directions), "select at least one SPI data channel")
+    signals, base = load_channels(path, sha256, [sck, cs, *directions.values()])
+    return spi_samples(
+        signals,
+        base,
+        sck,
+        cs,
+        mosi=mosi,
+        miso=miso,
+        mode=mode,
+        word_bits=word_bits,
+        bit_order=bit_order,
+        cs_active=cs_active,
+        min_phase_samples=min_phase_samples,
+    )
+
+
+def spi_samples(
+    signals,
+    base,
+    sck,
+    cs,
+    *,
+    mosi=None,
+    miso=None,
+    mode=0,
+    word_bits=8,
+    bit_order="msb",
+    cs_active="low",
+    min_phase_samples=2,
+):
     integer(mode, "SPI mode", 0, 3)
     integer(word_bits, "word bits", 1, 32)
     integer(min_phase_samples, "minimum phase samples", 2, 64)
@@ -201,8 +237,6 @@ def spi(
     require(cs_active in ("low", "high"), "invalid chip-select polarity")
     directions = {k: v for k, v in (("mosi", mosi), ("miso", miso)) if v is not None}
     require(bool(directions), "select at least one SPI data channel")
-    channels = [sck, cs, *directions.values()]
-    signals, base = load_channels(path, sha256, channels)
     clock = signals[sck]
     selected = [level == (cs_active == "high") for level in signals[cs]]
     base = _base(base, {"sck": sck, "cs": cs, **directions})

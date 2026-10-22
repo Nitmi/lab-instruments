@@ -1,0 +1,93 @@
+"""One explicitly synthetic multi-protocol capture and independently chosen expectations."""
+
+from __future__ import annotations
+
+from bus_fixtures import bus_capture, i2c_signal, spi_signal
+from logic_fixtures import uart_signal
+
+
+def fixture():
+    levels = {0: uart_signal(b"OK"), 1: [0] * 3 + ([1] * 2 + [0] * 6) * 12 + [1] * 2 + [0] * 6}
+    levels.update(
+        i2c_signal(
+            [
+                {"address": 0x48, "data": [2]},
+                {"address": 0x48, "read": True, "data": [0x12, 0x34], "acks": [True, True, False]},
+            ],
+            scl=2,
+            sda=3,
+        )
+    )
+    levels.update(spi_signal([0x96, 0], [0x35, 0xFF], channels=(4, 5, 6, 7)))
+    n = max(map(len, levels.values()))
+    levels = {ch: bits + [bits[-1]] * (n - len(bits)) for ch, bits in levels.items()}
+    spec = {
+        "schema_version": "lab-instruments.logic-check-spec.v1",
+        "checks": [
+            {
+                "id": "console",
+                "kind": "uart",
+                "configuration": {
+                    "channel": 0,
+                    "baud": 100000,
+                    "data_bits": 8,
+                    "parity": "none",
+                    "stop_bits": 1,
+                    "inverted": False,
+                },
+                "expect": {"bytes_hex": "4f4b"},
+            },
+            {
+                "id": "pwm",
+                "kind": "pwm",
+                "configuration": {"channel": 1, "active_level": "high"},
+                "expect": {
+                    "minimum_cycles": 12,
+                    "frequency_hz": {"minimum": 125000, "maximum": 125000},
+                    "duty_cycle": {"minimum": 0.25, "maximum": 0.25},
+                },
+            },
+            {
+                "id": "sensor",
+                "kind": "i2c",
+                "configuration": {"scl": 2, "sda": 3, "min_phase_samples": 2},
+                "expect": {
+                    "transfers": [
+                        {
+                            "address": 0x48,
+                            "direction": "write",
+                            "start_condition": "start",
+                            "end_condition": "repeated_start",
+                            "data": [2],
+                            "acks": [True, True],
+                        },
+                        {
+                            "address": 0x48,
+                            "direction": "read",
+                            "start_condition": "repeated_start",
+                            "end_condition": "stop",
+                            "data": [0x12, 0x34],
+                            "acks": [True, True, False],
+                        },
+                    ]
+                },
+            },
+            {
+                "id": "spi",
+                "kind": "spi",
+                "configuration": {
+                    "sck": 4,
+                    "cs": 5,
+                    "mosi": 6,
+                    "miso": 7,
+                    "mode": 0,
+                    "word_bits": 8,
+                    "bit_order": "msb",
+                    "cs_active": "low",
+                    "min_phase_samples": 2,
+                },
+                "expect": {"transfers": [{"mosi": [0x96, 0], "miso": [0x35, 0xFF]}]},
+            },
+        ],
+    }
+    return bus_capture(levels), spec

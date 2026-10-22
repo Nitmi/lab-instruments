@@ -25,6 +25,15 @@ def load_channels(path, sha256, channels):
     require(len(channels) == len(set(channels)), "protocol channels must be distinct")
     raw, ref = read(path, expected=sha256)
     capture = parse(raw)
+    return channels_from_capture(capture, ref, channels)
+
+
+def channels_from_capture(capture, ref, channels):
+    """Extract from one already-read snapshot; never follow saved file references."""
+    require(isinstance(channels, list) and 1 <= len(channels) <= 4, "invalid channel selection")
+    for channel in channels:
+        integer(channel, "DIO channel", 0, 15)
+    require(len(channels) == len(set(channels)), "protocol channels must be distinct")
     summary = inspect_capture_value(capture, ref)
     plan = capture["plan"]
     require(plan["instrument"] == "logic", "analysis requires a logic capture")
@@ -91,12 +100,18 @@ def finish(base, analysis):
 
 
 def uart(path, sha256, channel, baud, *, data_bits=8, parity="none", stop_bits=1, inverted=False):
+    bits, base = load(path, sha256, channel)
+    return uart_samples(
+        bits, base, baud, data_bits=data_bits, parity=parity, stop_bits=stop_bits, inverted=inverted
+    )
+
+
+def uart_samples(bits, base, baud, *, data_bits=8, parity="none", stop_bits=1, inverted=False):
     integer(baud, "baud", 50, 3_000_000)
     integer(data_bits, "data bits", 5, 8)
     require(parity in ("none", "even", "odd"), "unsupported parity")
     integer(stop_bits, "stop bits", 1, 2)
     require(type(inverted) is bool, "invalid inversion")
-    bits, base = load(path, sha256, channel)
     if inverted:
         bits = [1 - bit for bit in bits]
     step = base["sample_rate_hz"] / baud
@@ -201,8 +216,12 @@ def statistics(values):
 
 
 def pwm(path, sha256, channel, *, active_level="high"):
-    require(active_level in ("high", "low"), "unsupported active level")
     bits, base = load(path, sha256, channel)
+    return pwm_samples(bits, base, active_level=active_level)
+
+
+def pwm_samples(bits, base, *, active_level="high"):
+    require(active_level in ("high", "low"), "unsupported active level")
     active = [bit == (active_level == "high") for bit in bits]
     starts = [i for i in range(1, len(bits)) if not active[i - 1] and active[i]]
     cycles = []

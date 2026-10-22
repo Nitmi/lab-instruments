@@ -4,9 +4,20 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import __version__, bus_logic, logic, sdl, sdl_plan, sds, sds_plan, thermal, thermal_plan
+from . import (
+    __version__,
+    bus_logic,
+    logic,
+    logic_checks,
+    sdl,
+    sdl_plan,
+    sds,
+    sds_plan,
+    thermal,
+    thermal_plan,
+)
 from .capture import inspect_capture, load_plan, supervise
-from .common import LabError, encode, new_path, read, write_new
+from .common import LabError, digest, encode, new_path, read, write_new
 from .dwf import Dwf
 from .plan import MODEL, SDK_VERSION, create
 
@@ -52,6 +63,13 @@ def parser():
     inspect.add_argument("--json", action="store_true")
     logic_command = commands.add_parser("logic", help="offline AD3 digital samples; no SDK/device")
     logic_ops = logic_command.add_subparsers(dest="operation", required=True)
+    logic_check = logic_ops.add_parser("check", help="offline exact-data and per-cycle assertions")
+    logic_check.add_argument("--spec", type=Path, required=True)
+    logic_check.add_argument("--spec-sha256", required=True)
+    logic_check.add_argument("--capture", type=Path, required=True)
+    logic_check.add_argument("--capture-sha256", required=True)
+    logic_check.add_argument("--output", type=Path)
+    logic_check.add_argument("--json", action="store_true")
     for operation in ("uart", "pwm", "i2c", "spi"):
         analysis = logic_ops.add_parser(operation)
         analysis.add_argument("input", type=Path)
@@ -230,6 +248,21 @@ def main(argv=None):
             data = {"devices": sdk.enumerate(), "sdk": ref, "sdk_version": sdk.version}
         elif args.command == "inspect":
             data = inspect_capture(args.input, args.sha256)
+        elif args.command == "logic" and args.operation == "check":
+            target = new_path(args.output) if args.output is not None else None
+            report = logic_checks.evaluate(
+                args.spec, args.spec_sha256, args.capture, args.capture_sha256
+            )
+            data = {"report": report}
+            if target is not None:
+                raw = encode(report)
+                ref = {"path": str(target), "sha256": digest(raw), "size_bytes": len(raw)}
+                # Reject an oversized CLI envelope before creating the report.
+                encode({**result, "ok": report["ok"], "data": {**data, "output": ref}})
+                data["output"] = write_new(target, raw)
+            else:
+                encode({**result, "ok": report["ok"], "data": data})
+            code = 0 if report["ok"] else 3
         elif args.command == "logic":
             if args.output is not None:
                 new_path(args.output)

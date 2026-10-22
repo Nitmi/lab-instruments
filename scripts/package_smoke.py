@@ -15,6 +15,7 @@ import zipfile
 from pathlib import Path
 
 from bus_smoke import verify as verify_bus
+from checks_smoke import verify as verify_checks
 from load_smoke import verify as verify_load
 from logic_smoke import verify as verify_logic
 from scope_smoke import verify as verify_scope
@@ -165,6 +166,8 @@ def main():
     assert logic_smoke["ok"]
     bus_smoke = verify_bus(run, cli, root)
     assert bus_smoke["ok"]
+    checks_smoke = verify_checks(run, cli, root)
+    assert checks_smoke["ok"]
     verified = 0
     with zipfile.ZipFile(wheel) as archive:
         for name in archive.namelist():
@@ -184,6 +187,7 @@ def main():
         "thermal_saved_imports": thermal_smoke["saved_imports"],
         "logic_offline_analysis_verified": logic_smoke["ok"],
         "bus_offline_analysis_verified": bus_smoke["ok"],
+        "logic_assertions_verified": checks_smoke["ok"],
         "hardware_access": False,
         "native_sdk_verified": False,
         "physical_device_verified": False,
