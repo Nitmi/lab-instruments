@@ -6,7 +6,7 @@ import socket
 import subprocess
 
 import pytest
-from sdl_double import SdlDouble, stalled_loaded_measurement
+from sdl_double import SdlDouble, client_transmissions, stalled_loaded_measurement
 
 from lab_instruments.cli import main
 from lab_instruments.common import LabError, digest, encode, read, write_new
@@ -124,8 +124,9 @@ def test_pending_response_timeout_sends_off_once_but_cannot_claim_confirmation(t
         assert not result["cleanup"]["input_off_confirmed"]
         assert result["cleanup"]["instrument_state"] == "unknown"
         assert not result["cleanup"]["complete"]
-        assert server.commands.count(":SOUR:INP:STAT OFF") == 1
-        assert "*OPC?" not in server.commands[server.commands.index(":SOUR:INP:STAT OFF") + 1 :]
+        transmitted = client_transmissions(tmp_path)
+        assert transmitted.count(b":SOUR:INP:STAT OFF\n") == 1
+        assert not transmitted.split(b":SOUR:INP:STAT OFF\n", 1)[1]
 
 
 def test_off_stuck_keeps_failure_and_partial_measurements(tmp_path):

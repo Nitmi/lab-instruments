@@ -31,3 +31,10 @@ without the corresponding task scope.
 - Parser costs scale with bounded compressed/inflated archive bytes (8 MiB
   payload budget, 128 wheel / 256 source members). Input limits are not process
   RSS limits. Preserve corruption, tag/source drift and structured errors.
+- Initial hosted CI exposed a test equating a completed unacknowledged TCP OFF
+  write with the server thread already receiving it. With malformed/unread data,
+  Windows close/reset can discard queued peer data; client send evidence is not
+  receipt or effect. Assert the native TX bytes exactly once and keep cleanup
+  unknown. For the separate partial-send resynchronization test, wait for the
+  owned double's EOF before asserting its received bytes. Never add a product
+  retry, delay, extra query or stronger cleanup claim to satisfy a test race.

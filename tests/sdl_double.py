@@ -2,9 +2,23 @@
 
 from __future__ import annotations
 
+import base64
+import json
 import socket
 import threading
 import time
+
+
+def client_transmissions(directory):
+    """Observed client send bytes; never interpret them as peer receipt or effect."""
+    records = [
+        json.loads(line) for line in (directory / "transcript.jsonl").read_bytes().splitlines()
+    ]
+    return b"".join(
+        base64.b64decode(record["raw_base64"], validate=True)
+        for record in records
+        if record["kind"] == "tx"
+    )
 
 
 class SdlDouble:

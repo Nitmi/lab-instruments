@@ -4,7 +4,7 @@ import copy
 import json
 
 import pytest
-from sdl_double import SdlDouble
+from sdl_double import SdlDouble, client_transmissions
 from test_sdl import plan_for
 
 from lab_instruments.common import LabError, digest, encode, parse
@@ -37,7 +37,13 @@ def test_malformed_or_partial_loaded_response_cannot_be_used_for_off_confirmatio
         assert not result["cleanup"]["input_off_confirmed"]
         assert result["cleanup"]["instrument_state"] == "unknown"
         assert result["cleanup"]["socket_closed"]
-        assert server.commands.count(":SOUR:INP:STAT OFF") == 1
+        assert result["cleanup"]["off_transmitted"]
+        transmitted = client_transmissions(tmp_path)
+        assert transmitted.count(b":SOUR:INP:STAT OFF\n") == 1
+        # Desynchronization prevents an OFF acknowledgement. Socket close with
+        # unread bad responses can also discard queued peer data on Windows;
+        # a completed send is neither peer receipt nor instrument cleanup.
+        assert not transmitted.split(b":SOUR:INP:STAT OFF\n", 1)[1]
 
 
 def test_cancellation_after_on_attempts_off_and_keeps_failure(tmp_path, monkeypatch):
@@ -76,6 +82,8 @@ def test_partial_on_send_failure_is_not_retried_and_off_is_still_attempted(tmp_p
         assert result["input_enable_attempted"]
         assert result["cleanup"]["off_transmitted"]
         assert not result["cleanup"]["input_off_confirmed"]
+        server.thread.join(2)
+        assert not server.thread.is_alive(), "owned connection did not reach EOF"
         assert server.commands.count(":SOUR:INP:STAT OFF") == 1
         assert bytes(server.raw_received).count(b":SOUR:INP:STAT O\n") == 1
 
