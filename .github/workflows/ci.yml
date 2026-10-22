@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  host-checks:
+    env:
+      SOURCE_DATE_EPOCH: '1580601600'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990
+        with:
+          version: '0.11.7'
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+      - run: uv sync --locked --extra dev --no-editable
+      - run: uv run --no-sync ruff check .
+      - run: uv run --no-sync ruff format --check .
+      - run: uv run --no-sync pytest -ra
+      - name: Build source-bound Python assets
+        run: uv run --no-sync python scripts/release.py build --output-dir "${{ runner.temp }}/lab-release"
+      - name: Build thermal helper for explicit synthetic smoke only
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if ($LASTEXITCODE -ne 0 -or @($vs).Count -ne 1) { throw 'Expected one MSVC installation' }
+          uv run --no-sync python scripts/build_thermal_helper.py --visual-studio $vs --output "${{ runner.temp }}/lab-thermal-helper"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Cold install and synthetic protocol / thermal checks
+        run: uv run --no-sync python scripts/package_smoke.py --dist-dir "${{ runner.temp }}/lab-release" --output-dir "${{ runner.temp }}/lab-smoke" --thermal-helper "${{ runner.temp }}/lab-thermal-helper/lab-pt3-helper.exe"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: lab-host-evidence-py${{ matrix.python }}
+          path: |
+            ${{ runner.temp }}/lab-release/*
+            ${{ runner.temp }}/lab-smoke
+            ${{ runner.temp }}/lab-thermal-helper/build.json
+            ${{ runner.temp }}/lab-thermal-helper/build.stdout
+            ${{ runner.temp }}/lab-thermal-helper/build.stderr
+          if-no-files-found: warn
+          retention-days: 14
