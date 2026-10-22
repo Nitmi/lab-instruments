@@ -247,7 +247,11 @@ def supervise(plan_path, plan_sha, sdk_path, sdk_sha, output):
 
 def inspect_capture(path, sha256):
     raw, ref = read(path, expected=sha256)
-    result = parse(raw)
+    return inspect_capture_value(parse(raw), ref)
+
+
+def inspect_capture_value(result, ref):
+    """Validate an already-read capture without reopening its provenance paths."""
     require(result.get("schema_version") == "lab-instruments.capture.v1", "invalid capture schema")
     validate(result.get("plan"))
     require(

@@ -15,6 +15,10 @@ measurement behavior. The first real AD3 test must keep these statuses separate.
 5. Logic: compare known transitions against DIO bit order and byte count, exercise
    a non-exact divider rate, and confirm analysis uses actual rate. Input-only
    capture cannot confirm analog signal integrity or voltage compliance.
+   For offline UART/PWM, use known external serial bytes and pulse references,
+   including configured parity, polarity, complete/truncated windows and a
+   noninteger sample/baud ratio. Compare source bytes and frequency/duty against
+   independent references; synthetic decoder tests do not prove physical accuracy.
 6. Exercise ordinary acquisition timeout, SDK errors and cleanup; use a controlled
    disconnect only when separately appropriate. Require native stop/close evidence
    for successful cleanup; a killed worker leaves instrument state unknown.

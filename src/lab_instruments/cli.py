@@ -4,15 +4,15 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import __version__, sdl, sdl_plan, sds, sds_plan, thermal, thermal_plan
+from . import __version__, logic, sdl, sdl_plan, sds, sds_plan, thermal, thermal_plan
 from .capture import inspect_capture, load_plan, supervise
-from .common import LabError, encode, read, write_new
+from .common import LabError, encode, new_path, read, write_new
 from .dwf import Dwf
 from .plan import MODEL, SDK_VERSION, create
 
 
 def parser():
-    root = argparse.ArgumentParser(description="Bounded AD3, SDL1020X-E and SDS804X HD sessions.")
+    root = argparse.ArgumentParser(description="Bounded instrument sessions and offline analysis.")
     root.add_argument("--version", action="version", version="lab-instruments " + __version__)
     commands = root.add_subparsers(dest="command", required=True)
     doctor = commands.add_parser("doctor", help="host-only static readiness; never loads SDK")
@@ -50,6 +50,23 @@ def parser():
     inspect.add_argument("input", type=Path)
     inspect.add_argument("--sha256", required=True)
     inspect.add_argument("--json", action="store_true")
+    logic_command = commands.add_parser("logic", help="offline AD3 digital samples; no SDK/device")
+    logic_ops = logic_command.add_subparsers(dest="operation", required=True)
+    for operation in ("uart", "pwm"):
+        analysis = logic_ops.add_parser(operation)
+        analysis.add_argument("input", type=Path)
+        analysis.add_argument("--sha256", required=True)
+        analysis.add_argument("--channel", type=int, required=True)
+        analysis.add_argument("--output", type=Path)
+        analysis.add_argument("--json", action="store_true")
+        if operation == "uart":
+            analysis.add_argument("--baud", type=int, required=True)
+            analysis.add_argument("--data-bits", type=int, choices=(5, 6, 7, 8), default=8)
+            analysis.add_argument("--parity", choices=("none", "even", "odd"), default="none")
+            analysis.add_argument("--stop-bits", type=int, choices=(1, 2), default=1)
+            analysis.add_argument("--inverted", action="store_true")
+        else:
+            analysis.add_argument("--active-level", choices=("high", "low"), default="high")
     load = commands.add_parser(
         "load", help="SDL1020X-E: offline plan or bounded exact-identity session"
     )
@@ -198,6 +215,29 @@ def main(argv=None):
             data = {"devices": sdk.enumerate(), "sdk": ref, "sdk_version": sdk.version}
         elif args.command == "inspect":
             data = inspect_capture(args.input, args.sha256)
+        elif args.command == "logic":
+            if args.output is not None:
+                new_path(args.output)
+            analysis = (
+                logic.uart(
+                    args.input,
+                    args.sha256,
+                    args.channel,
+                    args.baud,
+                    data_bits=args.data_bits,
+                    parity=args.parity,
+                    stop_bits=args.stop_bits,
+                    inverted=args.inverted,
+                )
+                if args.operation == "uart"
+                else logic.pwm(
+                    args.input, args.sha256, args.channel, active_level=args.active_level
+                )
+            )
+            data = {"analysis": analysis}
+            if args.output is not None:
+                data["output"] = write_new(args.output, encode(analysis))
+            code = 0 if analysis["ok"] else 3
         elif args.command == "thermal":
             if args.operation == "plan":
                 keys = (

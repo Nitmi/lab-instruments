@@ -1,5 +1,9 @@
 # Lab Instruments
 
+Local **0.5.0** adds [offline UART decoding and PWM measurements](docs/logic-analysis.md)
+from hash-bound saved AD3 logic captures. It uses recorded actual sampling rates,
+retains signal errors and failed-source status, and never opens a device.
+
 An instrument CLI for embedded agents. It supports **Digilent Analog Discovery 3**
 input acquisition on Windows x64 with **WaveForms SDK 3.25.1**, and bounded
 **SIGLENT SDL1020X-E** electronic load sessions over SCPI TCP.
@@ -18,6 +22,7 @@ uses only Python's standard library. The vendor SDK/Adept runtime is separate.
 - Bounded single scope or logic acquisitions, actual settings readback, full data hashes.
 - A separate worker, host watchdog, input stop and exact owned-handle close evidence.
 - Offline sample inspection and voltage/transition summaries without reopening devices.
+- Offline UART frames and closed-cycle PWM frequency/duty measurements with raw sample spans.
 
 The AD3 input-only API has no supply, AWG, pattern, DIO drive, generic SDK call,
 device reset or close-all operations. SDK device opening may initialize its FPGA

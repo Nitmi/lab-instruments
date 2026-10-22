@@ -27,7 +27,7 @@ def require(condition, message, code="INVALID_INPUT"):
 
 def number(value, name, low, high):
     require(
-        type(value) in (int, float) and math.isfinite(value) and low <= value <= high,
+        type(value) in (int, float) and low <= value <= high and math.isfinite(value),
         f"invalid {name}",
     )
     return value
