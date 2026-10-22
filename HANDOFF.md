@@ -38,3 +38,8 @@ without the corresponding task scope.
   unknown. For the separate partial-send resynchronization test, wait for the
   owned double's EOF before asserting its received bytes. Never add a product
   retry, delay, extra query or stronger cleanup claim to satisfy a test race.
+- CI always retains pytest's explicit basetemp and JUnit, including negative
+  adapter evidence. A second hosted run failed while acquiring the synthetic
+  SDS baseline for an offline tamper case; the old assertion truncated the error
+  and the old artifact list omitted pytest outputs. Preserve the complete result
+  and evidence to diagnose it; do not weaken assertions or add capture retries.

@@ -246,7 +246,7 @@ def test_desync_after_single_does_not_send_cleanup(tmp_path):
 def test_saved_tamper_rejected(tmp_path, tamper):
     with SdsDouble() as server:
         result = perform(tmp_path, plan(server))
-        assert result["ok"], result
+        assert result["ok"], json.dumps(result, ensure_ascii=True)
     path = tmp_path / "scope-result.json"
     if tamper == "csv":
         (tmp_path / "c1-samples.csv").write_bytes(b"fabricated\n")

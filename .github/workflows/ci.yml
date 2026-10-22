@@ -31,7 +31,7 @@ jobs:
       - run: uv sync --locked --extra dev --no-editable
       - run: uv run --no-sync ruff check .
       - run: uv run --no-sync ruff format --check .
-      - run: uv run --no-sync pytest -ra
+      - run: uv run --no-sync pytest -ra --basetemp "${{ runner.temp }}/lab-pytest" --junitxml "${{ runner.temp }}/lab-pytest.xml"
       - name: Build source-bound Python assets
         run: uv run --no-sync python scripts/release.py build --output-dir "${{ runner.temp }}/lab-release"
       - name: Build thermal helper for explicit synthetic smoke only
@@ -49,6 +49,8 @@ jobs:
         with:
           name: lab-host-evidence-py${{ matrix.python }}
           path: |
+            ${{ runner.temp }}/lab-pytest
+            ${{ runner.temp }}/lab-pytest.xml
             ${{ runner.temp }}/lab-release/*
             ${{ runner.temp }}/lab-smoke
             ${{ runner.temp }}/lab-thermal-helper/build.json
