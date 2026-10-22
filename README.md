@@ -1,6 +1,9 @@
 # Lab Instruments
 
-Local **0.5.0** adds [offline UART decoding and PWM measurements](docs/logic-analysis.md)
+Local **0.6.0** adds [I2C and SPI offline decoding](docs/bus-analysis.md):
+repeated START/ACK/NACK and four explicit SPI modes, with transaction/raw-sample
+evidence and strict incomplete/ambiguous sampling results. It retains
+[offline UART decoding and PWM measurements](docs/logic-analysis.md)
 from hash-bound saved AD3 logic captures. It uses recorded actual sampling rates,
 retains signal errors and failed-source status, and never opens a device.
 
@@ -23,6 +26,7 @@ uses only Python's standard library. The vendor SDK/Adept runtime is separate.
 - A separate worker, host watchdog, input stop and exact owned-handle close evidence.
 - Offline sample inspection and voltage/transition summaries without reopening devices.
 - Offline UART frames and closed-cycle PWM frequency/duty measurements with raw sample spans.
+- Offline 7-bit I2C and CS-framed full-duplex SPI, preserving observed bus boundaries and errors.
 
 The AD3 input-only API has no supply, AWG, pattern, DIO drive, generic SDK call,
 device reset or close-all operations. SDK device opening may initialize its FPGA

@@ -13,13 +13,22 @@ MAX_RECORDS = 512
 
 
 def load(path, sha256, channel):
-    integer(channel, "DIO channel", 0, 15)
+    signals, base = load_channels(path, sha256, [channel])
+    base.pop("channels")
+    return signals[channel], {**base, "channel": channel}
+
+
+def load_channels(path, sha256, channels):
+    require(isinstance(channels, list) and 1 <= len(channels) <= 4, "invalid channel selection")
+    for channel in channels:
+        integer(channel, "DIO channel", 0, 15)
+    require(len(channels) == len(set(channels)), "protocol channels must be distinct")
     raw, ref = read(path, expected=sha256)
     capture = parse(raw)
     summary = inspect_capture_value(capture, ref)
     plan = capture["plan"]
     require(plan["instrument"] == "logic", "analysis requires a logic capture")
-    require(channel in plan["channels"], "channel was not selected in the capture plan")
+    require(set(channels) <= set(plan["channels"]), "channel was not selected in the capture plan")
     payload = capture.get("payload")
     require(isinstance(payload, dict), "capture has no complete digital payload")
     require(
@@ -40,7 +49,7 @@ def load(path, sha256, channel):
     )
     decoded = base64.b64decode(payload["raw_base64"], validate=True)
     words = struct.unpack("<" + "H" * plan["samples"], decoded)
-    bits = [(word >> channel) & 1 for word in words]
+    signals = {channel: [(word >> channel) & 1 for word in words] for channel in channels}
     base = {
         "schema_version": "lab-instruments.logic-analysis.v1",
         "capture": ref,
@@ -50,8 +59,8 @@ def load(path, sha256, channel):
         "source_status": capture["status"],
         "source_error": capture.get("error"),
         "source_cleanup": capture["cleanup"],
-        "channel": channel,
-        "samples": len(bits),
+        "channels": channels,
+        "samples": len(words),
         "sample_rate_hz": rate,
         "sample_rate_source": "saved_sdk_readback_not_independently_measured",
         "sample_interval_s": 1 / rate,
@@ -65,7 +74,7 @@ def load(path, sha256, channel):
         "calibration_verified": False,
         "sample_zero_utc_verified": False,
     }
-    return bits, base
+    return signals, base
 
 
 def span(start, end):

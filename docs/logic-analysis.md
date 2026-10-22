@@ -1,6 +1,7 @@
 # Offline UART and PWM from saved AD3 samples
 
-Local 0.5.0 adds offline analysis of `lab-instruments.capture.v1` logic payloads.
+Local 0.5.0 introduced offline analysis of `lab-instruments.capture.v1` logic payloads.
+Local 0.6.0 also provides [multi-channel I2C/SPI decoding](bus-analysis.md).
 It reads a single hash-bound capture, validates its plan and raw u16le payload,
 and uses the **saved actual sampling-rate readback**, never the requested rate.
 It does not load a vendor DLL, start a worker, enumerate/open a device, or follow
@@ -89,5 +90,5 @@ Software tests and installed-wheel smoke use explicit synthetic saved waveforms,
 including parity/framing errors, truncated frames, noninteger sample ratios,
 active-low PWM and failed cleanup. None proves SDK ABI or real measurement
 accuracy. Follow [physical acceptance](hardware-acceptance.md) after an AD3 is
-available. I2C/SPI decoding and analog threshold conversion are separate future
-extensions, not implicitly supported by this digital profile.
+available. I2C/SPI use their separately selected bus profiles; analog threshold
+conversion remains unsupported by these digital-only commands.

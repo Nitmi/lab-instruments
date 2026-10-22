@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lab-instruments"
-version = "0.5.0"
+version = "0.6.0"
 description = "Bounded instrument acquisition, electronic loads and radiometric thermal evidence for agents"
 readme = "README.md"
 requires-python = ">=3.11"

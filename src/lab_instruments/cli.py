@@ -4,7 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import __version__, logic, sdl, sdl_plan, sds, sds_plan, thermal, thermal_plan
+from . import __version__, bus_logic, logic, sdl, sdl_plan, sds, sds_plan, thermal, thermal_plan
 from .capture import inspect_capture, load_plan, supervise
 from .common import LabError, encode, new_path, read, write_new
 from .dwf import Dwf
@@ -52,11 +52,12 @@ def parser():
     inspect.add_argument("--json", action="store_true")
     logic_command = commands.add_parser("logic", help="offline AD3 digital samples; no SDK/device")
     logic_ops = logic_command.add_subparsers(dest="operation", required=True)
-    for operation in ("uart", "pwm"):
+    for operation in ("uart", "pwm", "i2c", "spi"):
         analysis = logic_ops.add_parser(operation)
         analysis.add_argument("input", type=Path)
         analysis.add_argument("--sha256", required=True)
-        analysis.add_argument("--channel", type=int, required=True)
+        if operation in ("uart", "pwm"):
+            analysis.add_argument("--channel", type=int, required=True)
         analysis.add_argument("--output", type=Path)
         analysis.add_argument("--json", action="store_true")
         if operation == "uart":
@@ -65,8 +66,22 @@ def parser():
             analysis.add_argument("--parity", choices=("none", "even", "odd"), default="none")
             analysis.add_argument("--stop-bits", type=int, choices=(1, 2), default=1)
             analysis.add_argument("--inverted", action="store_true")
-        else:
+        elif operation == "pwm":
             analysis.add_argument("--active-level", choices=("high", "low"), default="high")
+        else:
+            analysis.add_argument("--min-phase-samples", type=int, default=2)
+            if operation == "i2c":
+                analysis.add_argument("--scl", type=int, required=True)
+                analysis.add_argument("--sda", type=int, required=True)
+            else:
+                analysis.add_argument("--sck", type=int, required=True)
+                analysis.add_argument("--cs", type=int, required=True)
+                analysis.add_argument("--mosi", type=int)
+                analysis.add_argument("--miso", type=int)
+                analysis.add_argument("--mode", type=int, choices=(0, 1, 2, 3), required=True)
+                analysis.add_argument("--word-bits", type=int, default=8)
+                analysis.add_argument("--bit-order", choices=("msb", "lsb"), default="msb")
+                analysis.add_argument("--cs-active", choices=("low", "high"), default="low")
     load = commands.add_parser(
         "load", help="SDL1020X-E: offline plan or bounded exact-identity session"
     )
@@ -218,8 +233,8 @@ def main(argv=None):
         elif args.command == "logic":
             if args.output is not None:
                 new_path(args.output)
-            analysis = (
-                logic.uart(
+            if args.operation == "uart":
+                analysis = logic.uart(
                     args.input,
                     args.sha256,
                     args.channel,
@@ -229,11 +244,32 @@ def main(argv=None):
                     stop_bits=args.stop_bits,
                     inverted=args.inverted,
                 )
-                if args.operation == "uart"
-                else logic.pwm(
+            elif args.operation == "pwm":
+                analysis = logic.pwm(
                     args.input, args.sha256, args.channel, active_level=args.active_level
                 )
-            )
+            elif args.operation == "i2c":
+                analysis = bus_logic.i2c(
+                    args.input,
+                    args.sha256,
+                    args.scl,
+                    args.sda,
+                    min_phase_samples=args.min_phase_samples,
+                )
+            else:
+                analysis = bus_logic.spi(
+                    args.input,
+                    args.sha256,
+                    args.sck,
+                    args.cs,
+                    mosi=args.mosi,
+                    miso=args.miso,
+                    mode=args.mode,
+                    word_bits=args.word_bits,
+                    bit_order=args.bit_order,
+                    cs_active=args.cs_active,
+                    min_phase_samples=args.min_phase_samples,
+                )
             data = {"analysis": analysis}
             if args.output is not None:
                 data["output"] = write_new(args.output, encode(analysis))

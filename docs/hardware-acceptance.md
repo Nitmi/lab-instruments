@@ -19,6 +19,10 @@ measurement behavior. The first real AD3 test must keep these statuses separate.
    including configured parity, polarity, complete/truncated windows and a
    noninteger sample/baud ratio. Compare source bytes and frequency/duty against
    independent references; synthetic decoder tests do not prove physical accuracy.
+   I2C: compare known address/data, repeated START and target/controller ACK/NACK
+   with an independent reference; SPI: compare CS-framed MOSI/MISO and configured
+   polarity/phase/order, plus deliberate truncated/undersampled captures. A
+   successful decoded structure does not prove application success or pin timing.
 6. Exercise ordinary acquisition timeout, SDK errors and cleanup; use a controlled
    disconnect only when separately appropriate. Require native stop/close evidence
    for successful cleanup; a killed worker leaves instrument state unknown.
