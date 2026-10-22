@@ -270,6 +270,12 @@ def evaluate(spec_path, spec_sha256, capture_path, capture_sha256):
     validate(spec)
     raw_capture, capture_ref = read(capture_path, expected=capture_sha256)
     capture = parse(raw_capture)
+    return evaluate_snapshot(spec, spec_ref, capture, capture_ref, __version__)
+
+
+def evaluate_snapshot(spec, spec_ref, capture, capture_ref, runner_version):
+    """Shared deterministic evaluator; references describe already-read input bytes."""
+    validate(spec)
     checks = []
     for check in spec["checks"]:
         native = decode(capture, capture_ref, check["kind"], check["configuration"])
@@ -290,7 +296,7 @@ def evaluate(spec_path, spec_sha256, capture_path, capture_sha256):
     passed = all(check["ok"] for check in checks)
     report = {
         "schema_version": "lab-instruments.logic-check-report.v1",
-        "runner_version": __version__,
+        "runner_version": runner_version,
         "scope": "host_only_saved_logic_evaluation",
         "spec": spec_ref,
         "capture": capture_ref,

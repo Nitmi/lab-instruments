@@ -1,6 +1,9 @@
 # Lab Instruments
 
-Local **0.7.0** adds [offline protocol/PWM assertions](docs/logic-checks.md):
+Local **0.8.0** adds [saved report verification and JUnit export](docs/logic-reports.md).
+Both recompute every assertion from explicit hash-bound original inputs; JUnit
+keeps assertion failures and invalid evidence as distinct failing outcomes.
+It retains [offline protocol/PWM assertions](docs/logic-checks.md):
 exact UART/SPI data, I2C address/direction/ACK/boundaries, and per-cycle PWM
 frequency/duty ranges, evaluated against one hash-bound original capture.
 It retains [I2C and SPI offline decoding](docs/bus-analysis.md):
@@ -31,6 +34,7 @@ uses only Python's standard library. The vendor SDK/Adept runtime is separate.
 - Offline UART frames and closed-cycle PWM frequency/duty measurements with raw sample spans.
 - Offline 7-bit I2C and CS-framed full-duplex SPI, preserving observed bus boundaries and errors.
 - Declarative exact-data and per-cycle assertions with source-failure gates and saved reports.
+- Saved report binding verification and deterministic JUnit with failure/error preservation.
 
 The AD3 input-only API has no supply, AWG, pattern, DIO drive, generic SDK call,
 device reset or close-all operations. SDK device opening may initialize its FPGA

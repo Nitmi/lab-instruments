@@ -9,6 +9,7 @@ from . import (
     bus_logic,
     logic,
     logic_checks,
+    logic_reports,
     sdl,
     sdl_plan,
     sds,
@@ -70,6 +71,19 @@ def parser():
     logic_check.add_argument("--capture-sha256", required=True)
     logic_check.add_argument("--output", type=Path)
     logic_check.add_argument("--json", action="store_true")
+    for operation in ("inspect-check-report", "junit"):
+        report = logic_ops.add_parser(
+            operation, help="recompute a saved check report from original inputs"
+        )
+        report.add_argument("input", type=Path)
+        report.add_argument("--sha256", required=True)
+        report.add_argument("--spec", type=Path, required=True)
+        report.add_argument("--spec-sha256", required=True)
+        report.add_argument("--capture", type=Path, required=True)
+        report.add_argument("--capture-sha256", required=True)
+        if operation == "junit":
+            report.add_argument("--output", type=Path, required=True)
+        report.add_argument("--json", action="store_true")
     for operation in ("uart", "pwm", "i2c", "spi"):
         analysis = logic_ops.add_parser(operation)
         analysis.add_argument("input", type=Path)
@@ -263,6 +277,26 @@ def main(argv=None):
             else:
                 encode({**result, "ok": report["ok"], "data": data})
             code = 0 if report["ok"] else 3
+        elif args.command == "logic" and args.operation in ("inspect-check-report", "junit"):
+            target = new_path(args.output) if args.operation == "junit" else None
+            inputs = (
+                args.input,
+                args.sha256,
+                args.spec,
+                args.spec_sha256,
+                args.capture,
+                args.capture_sha256,
+            )
+            if target is None:
+                data = {"verification": logic_reports.inspect_report(*inputs)}
+                encode({**result, "ok": True, "data": data})
+            else:
+                raw, verification, counts = logic_reports.junit_report(*inputs)
+                code = 0 if verification["verdict"]["ok"] else 3
+                data = {"verification": verification, "junit": counts}
+                ref = {"path": str(target), "sha256": digest(raw), "size_bytes": len(raw)}
+                encode({**result, "ok": code == 0, "data": {**data, "output": ref}})
+                data["output"] = write_new(target, raw)
         elif args.command == "logic":
             if args.output is not None:
                 new_path(args.output)

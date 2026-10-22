@@ -84,7 +84,17 @@ def verify(run, cli, root):
         )
     )
     assert failed["data"]["report"]["summary"] == {"checks": 4, "passed": 3, "failed": 1}
-    failed_source = json.loads(run("checks-source-failed", args(source="checks-failed-source"), 3))
+    failed_source = json.loads(
+        run(
+            "checks-source-failed",
+            [
+                *args(source="checks-failed-source"),
+                "--output",
+                str(root / "checks-source-report.json"),
+            ],
+            3,
+        )
+    )
     assert all(c["status"] == "invalid_evidence" for c in failed_source["data"]["report"]["checks"])
     wrong = args()
     wrong[wrong.index("--capture-sha256") + 1] = "0" * 64
