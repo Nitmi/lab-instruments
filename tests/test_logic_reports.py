@@ -52,7 +52,7 @@ def cli_args(args, operation="inspect-check-report"):
     ]
 
 
-@pytest.mark.parametrize("version", ["0.7.0", "0.8.0"])
+@pytest.mark.parametrize("version", ["0.7.0", "0.8.0", "0.9.0"])
 @pytest.mark.parametrize("verdict", ["passed", "failed", "invalid_evidence"])
 def test_bound_inspection_preserves_verdict_and_origin(tmp_path, version, verdict):
     args, original = inputs(tmp_path, version=version, verdict=verdict)
@@ -261,7 +261,7 @@ def test_input_reference_tampering_is_rejected(tmp_path, source, field):
     "field,value",
     [
         ("runner_version", "0.6.0"),
-        ("runner_version", "0.9.0"),
+        ("runner_version", "99.0.0"),
         ("runner_version", True),
         ("schema_version", "unknown"),
     ],

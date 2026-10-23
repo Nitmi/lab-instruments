@@ -67,8 +67,8 @@ def descriptor(raw, channel, points):
     return result
 
 
-def decode(preamble, payload, channel, points):
-    meta = descriptor(preamble, channel, points)
+def voltage_samples(meta, payload, points):
+    """One probe-aware conversion shared by acquisition replay and offline checks."""
     require(
         len(payload) == points * 2,
         "waveform length differs from requested WORD points",
@@ -85,6 +85,13 @@ def decode(preamble, payload, channel, points):
         * factor
         for code in codes
     ]
+    require(all(math.isfinite(x) for x in voltage), "nonfinite decoded waveform")
+    return codes, voltage
+
+
+def decode(preamble, payload, channel, points):
+    meta = descriptor(preamble, channel, points)
+    codes, voltage = voltage_samples(meta, payload, points)
     first = meta["trigger_delay_s"] - meta["timebase_s"] * 10 / 2
     times = [first + i * meta["sample_interval_s"] for i in range(points)]
     require(all(math.isfinite(x) for x in (*times, *voltage)), "nonfinite decoded waveform")

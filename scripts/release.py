@@ -56,6 +56,7 @@ RUNTIME_FILES = {
         "thermal.py",
         "thermal_frame.py",
         "thermal_plan.py",
+        "waveform.py",
     )
 }
 

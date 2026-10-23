@@ -3,6 +3,11 @@
 Local **0.8.0** adds [saved report verification and JUnit export](docs/logic-reports.md).
 Both recompute every assertion from explicit hash-bound original inputs; JUnit
 keeps assertion failures and invalid evidence as distinct failing outcomes.
+Version 0.9.0 adds [saved analog waveform assertions](docs/waveform-checks.md) for
+AD3 and SDS804X HD: bounded voltage extrema/mean/peak-to-peak/RMS/AC RMS checks,
+full report recomputation and JUnit from original raw evidence. No device is
+opened by these commands. Physical instrument/SDK qualification remains pending.
+
 It retains [offline protocol/PWM assertions](docs/logic-checks.md):
 exact UART/SPI data, I2C address/direction/ACK/boundaries, and per-cycle PWM
 frequency/duty ranges, evaluated against one hash-bound original capture.

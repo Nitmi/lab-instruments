@@ -21,6 +21,7 @@ from logic_smoke import verify as verify_logic
 from report_smoke import verify as verify_reports
 from scope_smoke import verify as verify_scope
 from thermal_smoke import verify as verify_thermal
+from waveform_smoke import verify as verify_waveform
 
 
 def main():
@@ -171,6 +172,8 @@ def main():
     assert checks_smoke["ok"]
     reports_smoke = verify_reports(run, cli, root)
     assert reports_smoke["ok"]
+    waveform_smoke = verify_waveform(run, cli, root)
+    assert waveform_smoke["ok"]
     verified = 0
     with zipfile.ZipFile(wheel) as archive:
         for name in archive.namelist():
@@ -192,6 +195,7 @@ def main():
         "bus_offline_analysis_verified": bus_smoke["ok"],
         "logic_assertions_verified": checks_smoke["ok"],
         "logic_report_verification_junit_verified": reports_smoke["ok"],
+        "waveform_assertions_verification_junit_verified": waveform_smoke["ok"],
         "hardware_access": False,
         "native_sdk_verified": False,
         "physical_device_verified": False,

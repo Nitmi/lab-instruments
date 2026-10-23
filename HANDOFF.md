@@ -3,12 +3,31 @@
 Read this file and AGENTS.md before a new task. Cross-repository state is in the
 workspace HANDOFF.md and desktop plan.
 
-Version 0.8.0 is a software candidate; no vendor SDK/ABI or physical instrument
-qualification has occurred. Release preparation adds development-only bounded
-archive verification, source-bound reproducible builds and GitHub Actions. The
-intended destination Nitmi/lab-instruments is not evidence a remote exists.
-Do not publish, create that repository, activate Toolkit or change station pins
-without the corresponding task scope.
+Version 0.8.0 was published at a772f805, with separate provenance and formal cold
+acceptance. Current 0.9.0 is a local waveform-check candidate; no vendor SDK/ABI
+or physical instrument qualification has occurred. Do not publish this candidate,
+activate Toolkit or change station pins without the corresponding task scope.
+
+- Waveform checks read only explicit native AD3 captures or SDS saved evidence.
+  Reuse native ADC conversion and SDS replay; do not calculate from CSV/summary
+  alone. Source snapshots cap 8 MiB/1,615 files and read each unique file once.
+  Strict sample windows never clamp; DC coupling only. RMS includes DC; AC RMS
+  removes the population mean only, with no filtering or bandwidth guarantee.
+  Preserve false calibration/clipping/timing/authentication and native cleanup.
+- Saved waveform report inspection/JUnit regenerates every field using explicit
+  original inputs. Rehashed reports and stored path labels are not authority.
+  Missing channels/windows/coupling are invalid_evidence, not passed or skipped;
+  corrupt or failed source acquisition is an input failure, no measurement pass.
+- The first new SDS tests used result.json instead of native scope-result.json;
+  fix the fixture path, not the product format. Existing successful native tests
+  were unaffected. New SDS fixtures use the normal 2 s double budget and saved
+  copies; offline mutations never reacquire hardware or hide timeout failures.
+- A new runtime module changes the release verifier's independent exact member
+  list and minimal fixture counts. Keep both current. Version 0.9 leaves logic
+  decoder/assertion semantics unchanged, so logic producers 0.7/0.8/0.9 are
+  explicitly compatible; use an actually unknown version for the negative test.
+  Shared HIL/Trace dev313 does not install lab: source pytest needs an explicit
+  process-only src path; installed smoke uses the isolated wheel and -I instead.
 
 - Keep runtime modules, README/package metadata and uv.lock unchanged during
   release-only work so the accepted installed payloads and 74-file Toolkit pin

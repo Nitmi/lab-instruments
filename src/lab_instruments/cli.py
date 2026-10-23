@@ -16,6 +16,7 @@ from . import (
     sds_plan,
     thermal,
     thermal_plan,
+    waveform,
 )
 from .capture import inspect_capture, load_plan, supervise
 from .common import LabError, digest, encode, new_path, read, write_new
@@ -114,6 +115,20 @@ def parser():
                 analysis.add_argument("--word-bits", type=int, default=8)
                 analysis.add_argument("--bit-order", choices=("msb", "lsb"), default="msb")
                 analysis.add_argument("--cs-active", choices=("low", "high"), default="low")
+    wave = commands.add_parser("waveform", help="offline raw voltage assertions; no SDK or network")
+    wave_ops = wave.add_subparsers(dest="operation", required=True)
+    for operation in ("check", "inspect-check-report", "junit"):
+        check = wave_ops.add_parser(operation)
+        if operation != "check":
+            check.add_argument("input", type=Path)
+            check.add_argument("--sha256", required=True)
+        check.add_argument("--spec", type=Path, required=True)
+        check.add_argument("--spec-sha256", required=True)
+        check.add_argument("--capture", type=Path, required=True)
+        check.add_argument("--capture-sha256", required=True)
+        if operation != "inspect-check-report":
+            check.add_argument("--output", type=Path, required=operation == "junit")
+        check.add_argument("--json", action="store_true")
     load = commands.add_parser(
         "load", help="SDL1020X-E: offline plan or bounded exact-identity session"
     )
@@ -262,6 +277,27 @@ def main(argv=None):
             data = {"devices": sdk.enumerate(), "sdk": ref, "sdk_version": sdk.version}
         elif args.command == "inspect":
             data = inspect_capture(args.input, args.sha256)
+        elif args.command == "waveform":
+            target = new_path(args.output) if getattr(args, "output", None) is not None else None
+            inputs = (args.spec, args.spec_sha256, args.capture, args.capture_sha256)
+            if args.operation == "check":
+                report = waveform.evaluate(*inputs)
+                code = 0 if report["ok"] else 3
+                data = {"report": report}
+                raw = encode(report)
+            elif args.operation == "inspect-check-report":
+                _, verification = waveform.inspect_report(args.input, args.sha256, *inputs)
+                data = {"verification": verification}
+            else:
+                raw, verification, counts = waveform.junit_report(args.input, args.sha256, *inputs)
+                code = 0 if verification["verdict"]["ok"] else 3
+                data = {"verification": verification, "junit": counts}
+            if target is not None:
+                ref = {"path": str(target), "sha256": digest(raw), "size_bytes": len(raw)}
+                encode({**result, "ok": code == 0, "data": {**data, "output": ref}})
+                data["output"] = write_new(target, raw)
+            else:
+                encode({**result, "ok": code == 0, "data": data})
         elif args.command == "logic" and args.operation == "check":
             target = new_path(args.output) if args.output is not None else None
             report = logic_checks.evaluate(

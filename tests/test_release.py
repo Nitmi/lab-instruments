@@ -47,6 +47,7 @@ MODULES = (
     "thermal.py",
     "thermal_frame.py",
     "thermal_plan.py",
+    "waveform.py",
 )
 
 
@@ -119,7 +120,7 @@ def test_verify_binds_bytes_but_does_not_claim_publisher_authentication(tmp_path
     monkeypatch.setattr(release.subprocess, "run", forbidden)
     report = release.verify(tmp_path, REVISION)
     assert report["ok"] and report["source_revision"] == REVISION
-    assert report["wheel_members"] == 29 and report["source_members"] == 28
+    assert report["wheel_members"] == 30 and report["source_members"] == 29
     assert not report["executables_started"] and not report["hardware_access"]
     assert not report["publisher_authenticity_verified"]
     with pytest.raises(ValueError, match="Source revision differs"):

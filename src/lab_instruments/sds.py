@@ -350,8 +350,9 @@ def run(path, expected, output):
 
 
 class Replay:
-    def __init__(self, directory, records):
+    def __init__(self, directory, records, reader=read):
         self.directory, self.records, self.index = directory, records, 0
+        self.read = reader
 
     def exchange(self, command, kind="line", maximum=512):
         require(self.index < len(self.records), "missing wire transaction")
@@ -367,7 +368,7 @@ class Replay:
         for key in ("tx", "rx"):
             name = f"wire-{index:04d}-{key}.bin"
             require(record[key] == name, "invalid wire evidence name")
-            raw, _ = read(self.directory / name, expected=record[key + "_sha256"])
+            raw, _ = self.read(self.directory / name, expected=record[key + "_sha256"])
             require(len(raw) == record[key + "_bytes"], "wire evidence size differs")
             data[key] = raw
         require(data["tx"] == (command + "\n").encode("ascii"), "TX bytes differ")
@@ -391,6 +392,11 @@ class Replay:
 def inspect(path, expected):
     raw, ref = read(path, expected=expected)
     result = parse(raw)
+    return inspect_snapshot(result, ref, Path(path).parent)
+
+
+def inspect_snapshot(result, ref, directory, *, reader=read, retained=None):
+    """Replay explicitly supplied saved evidence; optionally retain verified raw waveforms."""
     require(
         result["schema_version"] == "lab-instruments.scope-result.v1", "unsupported scope result"
     )
@@ -407,10 +413,9 @@ def inspect(path, expected):
         and result["outputs_commanded"] is False,
         "invalid evidence boundary",
     )
-    directory = Path(path).parent
-    plan_raw, _ = read(directory / "plan.json")
+    plan_raw, _ = reader(directory / "plan.json")
     require(parse(plan_raw) == plan, "saved plan differs")
-    transcript, _ = read(directory / "transcript.jsonl", expected=result["transcript"]["sha256"])
+    transcript, _ = reader(directory / "transcript.jsonl", expected=result["transcript"]["sha256"])
     require(len(transcript) == result["transcript"]["size_bytes"], "transcript size differs")
     records = [parse(line) for line in transcript.splitlines()]
     require(len(records) <= 800, "too many scope wire records")
@@ -418,7 +423,7 @@ def inspect(path, expected):
     for index, record in enumerate(records):
         for key in ("tx", "rx"):
             require(record[key] == f"wire-{index:04d}-{key}.bin", "invalid wire file name")
-            partial, _ = read(directory / record[key], expected=record[key + "_sha256"])
+            partial, _ = reader(directory / record[key], expected=record[key + "_sha256"])
             require(len(partial) == record[key + "_bytes"], "partial wire size differs")
     require(
         type(result["ok"]) is bool
@@ -433,11 +438,13 @@ def inspect(path, expected):
         saved = {}
 
         def verify_file(name, payload):
-            original, file_ref = read(directory / name)
+            original, file_ref = reader(directory / name)
             require(original == payload, "derived waveform evidence differs from raw wire")
+            if retained is not None and name.endswith(("-preamble.bin", "-words.bin")):
+                retained[name] = (original, file_ref)
             return {"name": name, "sha256": file_ref["sha256"], "size_bytes": len(original)}
 
-        replay = Replay(directory, records)
+        replay = Replay(directory, records, reader)
         acquire(replay, plan, saved, verify_file, replay=True)
         require(replay.index == len(records), "unexpected extra wire transactions")
         require(
