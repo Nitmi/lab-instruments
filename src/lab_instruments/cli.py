@@ -7,6 +7,7 @@ from pathlib import Path
 from . import (
     __version__,
     bus_logic,
+    load_checks,
     logic,
     logic_checks,
     logic_reports,
@@ -167,6 +168,18 @@ def parser():
     load_run.add_argument("--sha256", required=True)
     load_run.add_argument("--output", type=Path, required=True)
     load_run.add_argument("--json", action="store_true")
+    for operation in ("check", "inspect-check-report", "junit"):
+        check = load_ops.add_parser(operation, help="offline saved-measurement assertions")
+        if operation != "check":
+            check.add_argument("input", type=Path)
+            check.add_argument("--sha256", required=True)
+        check.add_argument("--spec", type=Path, required=True)
+        check.add_argument("--spec-sha256", required=True)
+        check.add_argument("--capture", type=Path, required=True)
+        check.add_argument("--capture-sha256", required=True)
+        if operation != "inspect-check-report":
+            check.add_argument("--output", type=Path, required=operation == "junit")
+        check.add_argument("--json", action="store_true")
     scope = commands.add_parser(
         "scope", help="SDS804X HD: exact-identity WORD waveform acquisition"
     )
@@ -453,7 +466,31 @@ def main(argv=None):
                 result["executables_started"] = True
                 code = 0 if captured["ok"] else 3
         elif args.command == "load":
-            if args.operation == "plan":
+            if args.operation in ("check", "inspect-check-report", "junit"):
+                target = (
+                    new_path(args.output) if getattr(args, "output", None) is not None else None
+                )
+                inputs = (args.spec, args.spec_sha256, args.capture, args.capture_sha256)
+                if args.operation == "check":
+                    report = load_checks.evaluate(*inputs)
+                    code = 0 if report["ok"] else 3
+                    data, raw = {"report": report}, encode(report)
+                elif args.operation == "inspect-check-report":
+                    _, verification = load_checks.inspect_report(args.input, args.sha256, *inputs)
+                    data = {"verification": verification}
+                else:
+                    raw, verification, counts = load_checks.junit_report(
+                        args.input, args.sha256, *inputs
+                    )
+                    code = 0 if verification["verdict"]["ok"] else 3
+                    data = {"verification": verification, "junit": counts}
+                if target is not None:
+                    ref = {"path": str(target), "sha256": digest(raw), "size_bytes": len(raw)}
+                    encode({**result, "ok": code == 0, "data": {**data, "output": ref}})
+                    data["output"] = write_new(target, raw)
+                else:
+                    encode({**result, "ok": code == 0, "data": data})
+            elif args.operation == "plan":
                 keys = (
                     "host",
                     "serial",

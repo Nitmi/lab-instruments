@@ -1,6 +1,12 @@
 # Lab Instruments
 
-Local **0.8.0** adds [saved report verification and JUnit export](docs/logic-reports.md).
+Local **0.10.0** adds [saved SDL measurement assertions](docs/load-checks.md):
+voltage/current/power ranges, exact input state and phase windows, raw-command
+replay, full report recomputation and JUnit. Failed sources keep invalid-evidence
+errors and recorded cleanup; sequential queries do not become simultaneous
+measurements or energy estimates. The published 0.9 release remains available.
+
+It retains [saved report verification and JUnit export](docs/logic-reports.md).
 Both recompute every assertion from explicit hash-bound original inputs; JUnit
 keeps assertion failures and invalid evidence as distinct failing outcomes.
 Version 0.9.0 adds [saved analog waveform assertions](docs/waveform-checks.md) for

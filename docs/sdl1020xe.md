@@ -95,6 +95,9 @@ from its mere existence, and the kernel lock is released when the handle closes.
 
 ## Evidence and limitations
 
+Local 0.10.0 adds [saved measurement assertions and JUnit](load-checks.md).
+These offline commands replay saved bytes and never invoke `load run`.
+
 `plan.json`, `transcript.jsonl` and `load-result.json` preserve input bytes,
 commands, raw TX/RX fragments (base64), host UTC/monotonic windows, partial/errors,
 samples, effects and cleanup. Measurements are three separate queries, not

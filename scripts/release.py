@@ -42,6 +42,7 @@ RUNTIME_FILES = {
         "common.py",
         "dwf.py",
         "lease.py",
+        "load_checks.py",
         "logic.py",
         "logic_checks.py",
         "logic_reports.py",

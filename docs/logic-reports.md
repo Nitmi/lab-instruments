@@ -32,7 +32,7 @@ labels differ. Recorded labels are not authenticated historical paths. Neither
 hash verification nor recomputation proves the authenticity of the original
 capture, producer version string, hardware, firmware or measurement.
 
-The verifier accepts producer versions 0.7.0 and 0.8.0 only: they share identical
+The verifier accepts producer versions 0.7.0, 0.8.0, 0.9.0 and 0.10.0: they share identical
 v1 evaluator/decoder semantics. It retains the recorded producer version when
 recomputing, while separately recording the verifier version. Unknown older or
 future versions are rejected. A future decoder change needs explicit semantic

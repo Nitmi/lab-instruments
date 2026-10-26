@@ -52,7 +52,7 @@ def cli_args(args, operation="inspect-check-report"):
     ]
 
 
-@pytest.mark.parametrize("version", ["0.7.0", "0.8.0", "0.9.0"])
+@pytest.mark.parametrize("version", ["0.7.0", "0.8.0", "0.9.0", "0.10.0"])
 @pytest.mark.parametrize("verdict", ["passed", "failed", "invalid_evidence"])
 def test_bound_inspection_preserves_verdict_and_origin(tmp_path, version, verdict):
     args, original = inputs(tmp_path, version=version, verdict=verdict)

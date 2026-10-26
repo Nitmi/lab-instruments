@@ -16,6 +16,7 @@ from pathlib import Path
 
 from bus_smoke import verify as verify_bus
 from checks_smoke import verify as verify_checks
+from load_checks_smoke import verify as verify_load_checks
 from load_smoke import verify as verify_load
 from logic_smoke import verify as verify_logic
 from report_smoke import verify as verify_reports
@@ -174,6 +175,8 @@ def main():
     assert reports_smoke["ok"]
     waveform_smoke = verify_waveform(run, cli, root)
     assert waveform_smoke["ok"]
+    load_checks_smoke = verify_load_checks(run, cli, root)
+    assert load_checks_smoke["ok"]
     verified = 0
     with zipfile.ZipFile(wheel) as archive:
         for name in archive.namelist():
@@ -196,6 +199,8 @@ def main():
         "logic_assertions_verified": checks_smoke["ok"],
         "logic_report_verification_junit_verified": reports_smoke["ok"],
         "waveform_assertions_verification_junit_verified": waveform_smoke["ok"],
+        "load_assertions_verification_junit_verified": load_checks_smoke["ok"],
+        "load_assertion_cases": load_checks_smoke["scenarios"],
         "hardware_access": False,
         "native_sdk_verified": False,
         "physical_device_verified": False,

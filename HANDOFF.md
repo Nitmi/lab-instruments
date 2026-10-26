@@ -3,10 +3,28 @@
 Read this file and AGENTS.md before a new task. Cross-repository state is in the
 workspace HANDOFF.md and desktop plan.
 
-Version 0.8.0 was published at a772f805, with separate provenance and formal cold
-acceptance. Current 0.9.0 is a local waveform-check candidate; no vendor SDK/ABI
-or physical instrument qualification has occurred. Do not publish this candidate,
+Version 0.9.0 was published at 5eb1e8e, with separate provenance and formal cold
+acceptance. Current 0.10.0 adds local saved SDL check/report/JUnit commands;
+no vendor SDK/ABI or physical instrument qualification has occurred. Do not publish this candidate,
 activate Toolkit or change station pins without the corresponding task scope.
+
+- Load checks snapshot result/fixed plan/transcript once; use the shared native
+  inspect_snapshot plus strict in-memory successful-command replay. Unknown or
+  missing writes/queries cannot be ignored just because measurement summaries
+  match. Failed sources preserve unscored partial readings/error/cleanup but
+  every check is invalid_evidence, not a subset pass. Never reconnect or acquire
+  hardware during saved-data evaluation. Read docs/load-checks.md for schema.
+- V/I/P are sequential queries; use the returned power, never derive synchronized
+  power/energy or measured timing. Historical OFF readback is not current state.
+  Native failed/cleanup-unknown evidence and all false qualification flags must
+  survive report recomputation and JUnit. Inspection exit 0 is consistency,
+  check/JUnit exit 3 is a complete failing/error report, exit 2 is input failure.
+- Version 0.10 retains logic producers 0.7/0.8/0.9/0.10 and waveform producers
+  0.9/0.10 with unchanged v1 semantics. Preserve actual producer in regeneration;
+  never make a version bump silently reject old saved reports or relabel them.
+- New runtime modules change release.py's exact wheel inventory AND the
+  independent test fixture member counts. The installed smoke reuses its six
+  existing SDL sessions for offline checks; do not reacquire per tamper case.
 
 - Waveform checks read only explicit native AD3 captures or SDS saved evidence.
   Reuse native ADC conversion and SDS replay; do not calculate from CSV/summary

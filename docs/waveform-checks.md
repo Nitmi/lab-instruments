@@ -2,9 +2,9 @@
 
 Version 0.9.0 adds `waveform check`, `waveform inspect-check-report` and `waveform junit`.
 They read saved native evidence only: no SDK, socket, discovery, subprocess or new
-acquisition. Toolkit's currently published instrument pin remains on lab 0.8.0;
-select a separately inspected 0.9.0 environment for these commands. Existing HIL/Trace
-logic-report import does not accept this new waveform report format.
+acquisition. Toolkit 0.33.0's published instrument pin selects lab 0.9.0 with
+HIL/Trace 0.10.0 waveform evidence support. Their digital `instrument` report
+format remains separate; never submit voltage evidence as a logic report.
 
 ## Contract and input
 
@@ -90,7 +90,8 @@ assertions, spans, input bindings, cleanup and every false claim. Rehashing an e
 report is insufficient. Verification exit 0 means the report is consistent, even
 if its test verdict failed. Inspect reads path labels as labels only: relocate
 original byte-identical inputs explicitly, retaining SDS's fixed sibling names.
-Waveform producer 0.9.0 is the only supported producer; no optimistic compatibility.
+Waveform producers 0.9.0 and 0.10.0 share the same v1 semantics; the verifier
+retains the actual producer version. Unknown producers require a separate review.
 
 `junit` also performs full recomputation. Exit 0 is all passed, 3 exports actual
 failure/error, 2 is input/verification/output error. Each check becomes one case;

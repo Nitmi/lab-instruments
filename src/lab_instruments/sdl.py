@@ -340,6 +340,11 @@ def run(path, expected, output):
 def inspect(path, expected):
     raw, ref = read(path, expected=expected)
     result = parse(raw)
+    return inspect_snapshot(result, ref, Path(path).parent)
+
+
+def inspect_snapshot(result, ref, directory, *, reader=read):
+    """Inspect caller-snapshotted bytes; recorded paths are never followed."""
     require(result["schema_version"] == "lab-instruments.load-result.v1", "unsupported load result")
     plan = result["plan"]
     validate(plan)
@@ -350,9 +355,7 @@ def inspect(path, expected):
         and result["authorization_granted"] is False,
         "invalid evidence origin/boundary",
     )
-    transcript, _ = read(
-        Path(path).parent / "transcript.jsonl", expected=result["transcript"]["sha256"]
-    )
+    transcript, _ = reader(directory / "transcript.jsonl", expected=result["transcript"]["sha256"])
     require(len(transcript) == result["transcript"]["size_bytes"], "transcript size differs")
     records = [parse(line) for line in transcript.splitlines()]
     require(len(records) <= 4000, "too many transcript records")

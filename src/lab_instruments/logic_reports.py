@@ -9,7 +9,7 @@ from .common import MAX_JSON_BYTES, encode, parse, read, require
 
 # These producers share the exact v1 assertion/decoder semantics. Unknown versions
 # require an explicit compatibility review, not a best-effort pass.
-PRODUCERS = ("0.7.0", "0.8.0", "0.9.0")
+PRODUCERS = ("0.7.0", "0.8.0", "0.9.0", "0.10.0")
 FLAGS = {
     "hardware_access": False,
     "executables_started": False,

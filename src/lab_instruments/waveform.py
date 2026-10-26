@@ -17,6 +17,7 @@ from .sds_wave import descriptor, voltage_samples
 
 SPEC = "lab-instruments.waveform-check-spec.v1"
 REPORT = "lab-instruments.waveform-check-report.v1"
+PRODUCERS = ("0.9.0", "0.10.0")  # Identical v1 voltage/recomputation semantics.
 METRICS = ("minimum_v", "maximum_v", "mean_v", "peak_to_peak_v", "rms_v", "ac_rms_v")
 FLAGS = {
     key: False
@@ -232,7 +233,17 @@ def evaluate(spec_path, spec_sha256, capture_path, capture_sha256, *, labels=Non
     )
 
 
-def evaluate_snapshot(spec, spec_ref, channels, source_info, capture_ref, snapshot, *, labels=None):
+def evaluate_snapshot(
+    spec,
+    spec_ref,
+    channels,
+    source_info,
+    capture_ref,
+    snapshot,
+    *,
+    labels=None,
+    version=__version__,
+):
     checks = []
     for check in spec["checks"]:
         channel = channels.get(check["channel"])
@@ -293,7 +304,7 @@ def evaluate_snapshot(spec, spec_ref, channels, source_info, capture_ref, snapsh
     passed = all(c["ok"] for c in checks)
     report = {
         "schema_version": REPORT,
-        "runner_version": __version__,
+        "runner_version": version,
         "scope": "host_only_saved_waveform_evaluation",
         "spec": spec_ref,
         "capture": capture_ref,
@@ -333,7 +344,7 @@ def inspect_report(
     raw, ref = read(report_path, expected=report_sha256)
     report = parse(raw)
     require(
-        report.get("schema_version") == REPORT and report.get("runner_version") == __version__,
+        report.get("schema_version") == REPORT and report.get("runner_version") in PRODUCERS,
         "unsupported waveform report producer",
     )
     # Validate bindings before regenerating; never open the report's path labels.
@@ -355,6 +366,7 @@ def inspect_report(
         capture_ref,
         snapshot,
         labels=(report["spec"], report["capture"]),
+        version=report["runner_version"],
     )
     require(
         encode(report) == encode(regenerated),
