@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 
 from .capture import now
-from .common import LabError, digest, encode, new_path, parse, read, require, write_new
+from .common import LabError, checked, digest, encode, new_path, parse, read, require, write_new
 from .lease import Lease
 from .thermal_frame import CONTROLS, analyze, trends
 from .thermal_plan import PART, validate
@@ -45,8 +45,8 @@ def bundle(directory, plan):
     return source
 
 
-def load_source(path, expected, plan):
-    raw, ref = read(path, expected=expected)
+def load_source(path, expected, plan, *, reader=read):
+    raw, ref = reader(path, expected=expected)
     source = parse(raw)
     require(
         set(source) == {"schema_version", "plan_sha256", "files"}
@@ -63,7 +63,7 @@ def load_source(path, expected, plan):
             isinstance(file_ref, dict) and set(file_ref) == {"sha256", "size_bytes"},
             "invalid file reference",
         )
-        data, _ = read(Path(path).parent / name, expected=file_ref["sha256"])
+        data, _ = reader(Path(path).parent / name, expected=file_ref["sha256"])
         require(len(data) == file_ref["size_bytes"], "source file size differs")
         payloads[name] = data
     return source, payloads, ref
@@ -307,6 +307,11 @@ def run(plan_path, plan_hash, helper, helper_hash, output):
 def inspect(path, expected):
     raw, ref = read(path, expected=expected)
     result = parse(raw)
+    return inspect_snapshot(result, ref, Path(ref["path"]).parent)
+
+
+def inspect_snapshot(result, ref, directory, *, reader=read, retained=None):
+    """Native recomputation from one caller-owned byte snapshot, never a helper."""
     require(
         result["schema_version"] == "lab-instruments.thermal-result.v1", "invalid thermal result"
     )
@@ -323,12 +328,27 @@ def inspect(path, expected):
         and result["outputs_commanded"] is False,
         "invalid evidence boundary",
     )
-    directory = Path(path).parent
     artifacts = result["artifacts"]
     require(
         isinstance(artifacts, dict) and len(artifacts) <= 100, "invalid thermal artifact inventory"
     )
-    require(encode(artifacts) == encode(inventory(directory)), "thermal artifact inventory differs")
+    names, pending, count = set(), [directory], 0
+    while pending:
+        parent = pending.pop()
+        with os.scandir(parent) as entries:
+            for item in entries:
+                count += 1
+                require(count <= 128, "thermal directory entry limit", "LIMIT_EXCEEDED")
+                entry = checked(Path(item.path))
+                if entry.is_dir():
+                    require(parent == directory and entry.name == "native", "unexpected directory")
+                    pending.append(entry)
+                else:
+                    require(entry.is_file(), "nonregular thermal evidence")
+                    name = entry.relative_to(directory).as_posix()
+                    if name != "thermal-result.json":
+                        names.add(name)
+    require(names == set(artifacts), "thermal artifact inventory differs")
     for name, file_ref in artifacts.items():
         parts = name.split("/")
         require(
@@ -337,9 +357,9 @@ def inspect(path, expected):
             and name != "thermal-result.json",
             "invalid artifact path",
         )
-        data, _ = read(directory / name, expected=file_ref["sha256"])
+        data, _ = reader(directory / name, expected=file_ref["sha256"])
         require(len(data) == file_ref["size_bytes"], "artifact size differs")
-    saved_plan = parse(read(directory / "plan.json")[0])
+    saved_plan = parse(reader(directory / "plan.json", maximum=32768)[0])
     require(
         saved_plan == plan
         and type(result["ok"]) is bool
@@ -348,15 +368,17 @@ def inspect(path, expected):
     )
     if result["ok"]:
         source_path = directory / "native/source.json"
-        source_raw, _ = read(source_path)
-        _, payloads, _ = load_source(source_path, digest(source_raw), plan)
+        source_raw, _ = reader(source_path)
+        _, payloads, _ = load_source(source_path, digest(source_raw), plan, reader=reader)
 
         def verify(name, payload):
-            original, file_ref = read(directory / name)
+            original, file_ref = reader(directory / name)
             require(original == payload, "thermal CSV differs from source frame")
             return {"name": name, "sha256": file_ref["sha256"], "size_bytes": len(original)}
 
         analysis = evaluate(plan, payloads, verify)
+        if retained is not None:
+            retained.update(analysis=analysis, payloads=payloads)
         require(
             encode(analysis) == encode(result["analysis"]),
             "thermal analysis differs from raw evidence",

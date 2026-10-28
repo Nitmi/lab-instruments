@@ -21,6 +21,7 @@ from load_smoke import verify as verify_load
 from logic_smoke import verify as verify_logic
 from report_smoke import verify as verify_reports
 from scope_smoke import verify as verify_scope
+from thermal_checks_smoke import verify as verify_thermal_checks
 from thermal_smoke import verify as verify_thermal
 from waveform_smoke import verify as verify_waveform
 
@@ -177,6 +178,8 @@ def main():
     assert waveform_smoke["ok"]
     load_checks_smoke = verify_load_checks(run, cli, root)
     assert load_checks_smoke["ok"]
+    thermal_checks_smoke = verify_thermal_checks(run, cli, root)
+    assert thermal_checks_smoke["ok"]
     verified = 0
     with zipfile.ZipFile(wheel) as archive:
         for name in archive.namelist():
@@ -201,6 +204,8 @@ def main():
         "waveform_assertions_verification_junit_verified": waveform_smoke["ok"],
         "load_assertions_verification_junit_verified": load_checks_smoke["ok"],
         "load_assertion_cases": load_checks_smoke["scenarios"],
+        "thermal_assertions_verification_junit_verified": thermal_checks_smoke["ok"],
+        "thermal_assertion_cases": thermal_checks_smoke["scenarios"],
         "hardware_access": False,
         "native_sdk_verified": False,
         "physical_device_verified": False,

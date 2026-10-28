@@ -16,11 +16,12 @@ from . import (
     sds,
     sds_plan,
     thermal,
+    thermal_checks,
     thermal_plan,
     waveform,
 )
 from .capture import inspect_capture, load_plan, supervise
-from .common import LabError, digest, encode, new_path, read, write_new
+from .common import LabError, digest, encode, new_path, read, require, write_new
 from .dwf import Dwf
 from .plan import MODEL, SDK_VERSION, create
 
@@ -217,6 +218,18 @@ def parser():
         "thermal", help="PureThermal/Lepton: bounded Y16 capture and offline ROI analysis"
     )
     camera_ops = camera.add_subparsers(dest="operation", required=True)
+    for operation in ("check", "inspect-check-report", "junit"):
+        check = camera_ops.add_parser(operation, help="offline saved radiometric assertions")
+        if operation != "check":
+            check.add_argument("input", type=Path)
+            check.add_argument("--sha256", required=True)
+        check.add_argument("--spec", type=Path, required=True)
+        check.add_argument("--spec-sha256", required=True)
+        check.add_argument("--capture", type=Path, required=True)
+        check.add_argument("--capture-sha256", required=True)
+        if operation != "inspect-check-report":
+            check.add_argument("--output", type=Path, required=operation == "junit")
+        check.add_argument("--json", action="store_true")
     camera_plan = camera_ops.add_parser("plan", help="host-only request; no camera discovery")
     camera_plan.add_argument("--link")
     camera_plan.add_argument("--serial-hex", dest="serial")
@@ -391,7 +404,35 @@ def main(argv=None):
                 data["output"] = write_new(args.output, encode(analysis))
             code = 0 if analysis["ok"] else 3
         elif args.command == "thermal":
-            if args.operation == "plan":
+            if args.operation in ("check", "inspect-check-report", "junit"):
+                target = new_path(args.output) if getattr(args, "output", None) else None
+                require(
+                    target is None or not target.is_relative_to(args.capture.absolute().parent),
+                    "check output must be outside the source capture directory",
+                )
+                inputs = (args.spec, args.spec_sha256, args.capture, args.capture_sha256)
+                if args.operation == "check":
+                    report = thermal_checks.evaluate(*inputs)
+                    code = 0 if report["ok"] else 3
+                    data, raw = {"report": report}, encode(report)
+                elif args.operation == "inspect-check-report":
+                    _, verification = thermal_checks.inspect_report(
+                        args.input, args.sha256, *inputs
+                    )
+                    data = {"verification": verification}
+                else:
+                    raw, verification, counts = thermal_checks.junit_report(
+                        args.input, args.sha256, *inputs
+                    )
+                    code = 0 if verification["verdict"]["ok"] else 3
+                    data = {"verification": verification, "junit": counts}
+                if target is not None:
+                    ref = {"path": str(target), "sha256": digest(raw), "size_bytes": len(raw)}
+                    encode({**result, "ok": code == 0, "data": {**data, "output": ref}})
+                    data["output"] = write_new(target, raw)
+                else:
+                    encode({**result, "ok": code == 0, "data": data})
+            elif args.operation == "plan":
                 keys = (
                     "link",
                     "serial",

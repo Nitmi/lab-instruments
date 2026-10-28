@@ -3,10 +3,47 @@
 Read this file and AGENTS.md before a new task. Cross-repository state is in the
 workspace HANDOFF.md and desktop plan.
 
-Version 0.9.0 was published at 5eb1e8e, with separate provenance and formal cold
-acceptance. Current 0.10.0 adds local saved SDL check/report/JUnit commands;
-no vendor SDK/ABI or physical instrument qualification has occurred. Do not publish this candidate,
-activate Toolkit or change station pins without the corresponding task scope.
+Published 0.10.0 is b953725f, with provenance and formal cold acceptance recorded
+in the workspace handoff. Current local 0.11.0 adds saved thermal assertions;
+no vendor SDK/ABI or physical instrument qualification has occurred. Do not
+publish this candidate, activate Toolkit or change station pins without scope.
+
+- Thermal checks use native thermal.inspect_snapshot, evaluate and thermal_frame
+  conversion/trends, never CSV summaries alone or a second temperature decoder.
+  The snapshot reads each unique source artifact once, bounded to 101 files and
+  16 MiB. A streaming directory walk caps 128 entries and rejects links. Keep
+  report/XML/spec bounds and original source inventory; byte limits are not RSS.
+- ROIs and delivered-buffer windows never clamp. Explicit invalid-pixel budgets,
+  unavailable frames, all-invalid ROIs and requested-but-unavailable trends give
+  invalid_evidence/errors, not skips. Exact duplicate frames affect only trends;
+  FFC/effective gain/resolution/mask changes invalidate delta assertions. Maxima
+  can occur at different pixels; max_delta_c is not tracked-point temperature.
+- Thermal source failures retain error/native unknown cleanup and inventoried
+  bytes, and no partial frame is scored. Source corruption/binding failures are
+  input errors. New checks preserve apparent-surface-only, false accuracy/scene/
+  calibration/identity/clock claims. Original radiometry controls stay attached.
+- Thermal check output inside the original source directory is rejected before
+  writing so it cannot invalidate the capture inventory. Saved path labels are
+  never opened. Inspection regenerates the entire report; a new report hash is
+  no escape from comparison. JUnit errors/failures preserve the original verdict.
+- 0.11 leaves digital/waveform/load v1 semantics unchanged and explicitly retains
+  all accepted old producers. Installed compatibility reused 14 actual historical
+  bundles on each Python, preserving producer0.8/0.10 and original failed/invalid
+  outcomes. Do not relabel old reports or use those schemas for thermal evidence.
+- Local Python3.11/3.13 full suites each passed 718 with one Windows symlink skip;
+  after output/walk protections, thermal-focused suites each passed 87/one skip.
+  Two independent wheel installs each passed 151 CLI commands and 27 package
+  code files. Synthetic fixtures/protocol peers only; no physical helper/SDK.
+- Installed Python3.13 warm runtime (one warmup/seven samples) measured about
+  48 ms for 1 frame/1 full-image check and 636 ms for 8 frames/8 checks; Python
+  traced peaks were 5,122,402/9,228,823 bytes. Source snapshots were 38/52 files,
+  559,390/4,123,835 bytes. Network/process/acquisition entry points were blocked.
+  These are not startup, cold-I/O, RSS, worst-case or cross-host latency promises.
+  Raw logs and fixtures: D:\Code\tmp\lab-thermal-checks-0110-20261028.
+- Development wrapper pitfalls: PowerShell does not support shell-style brace
+  expansion, and rg path globs need -g with a directory on Windows. Initial Ruff
+  checks preceded formatting; final lint/format passed. Preserve original tool
+  failures as host mistakes, not physical instrument failures.
 
 - Load checks snapshot result/fixed plan/transcript once; use the shared native
   inspect_snapshot plus strict in-memory successful-command replay. Unknown or

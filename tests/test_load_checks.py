@@ -491,7 +491,7 @@ def test_old_waveform_09_remains_verifiable_without_relabelling(tmp_path):
     rp.write_bytes(encode(report))
     original, verified = waveform.inspect_report(rp, digest(rp.read_bytes()), *args)
     assert original["runner_version"] == verified["producer_runner_version"] == "0.9.0"
-    assert verified["verifier_version"] == "0.10.0"
+    assert verified["verifier_version"] == waveform.__version__
 
 
 def test_eight_checks_over_maximum_native_window_keep_all_samples(tmp_path):

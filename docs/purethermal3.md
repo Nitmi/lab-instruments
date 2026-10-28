@@ -1,9 +1,12 @@
-# PureThermal 3 + radiometric Lepton 3.5 (0.4.0 local candidate)
+# PureThermal 3 + radiometric Lepton 3.5
 
 This adapter implements Windows Media Foundation Y16 acquisition, fixed UVC
 extension-unit GET readbacks and offline ROI analysis. It is verified with saved
 synthetic frames and an explicit native test backend. **No physical PureThermal
 camera, USB driver behavior, firmware ABI or temperature accuracy is verified.**
+
+For already saved captures, version 0.11 adds separate
+[thermal assertions and CI reports](thermal-checks.md), without camera access.
 
 The initial profile is Lepton 3.5 part `500-0771-01`, native `Y16 `, 160x122,
 tightly packed top-down stride 320: 160x120 image followed by 320 telemetry words.

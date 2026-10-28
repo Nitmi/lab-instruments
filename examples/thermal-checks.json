@@ -1,0 +1,14 @@
+{
+  "schema_version": "lab-instruments.thermal-check-spec.v1",
+  "checks": [{
+    "id": "cpu",
+    "roi": {"x": 20, "y": 10, "width": 20, "height": 20},
+    "window": {"start": 0, "end_exclusive": 3},
+    "maximum_invalid_pixels": 0,
+    "expect": {
+      "max_c": {"minimum": 20, "maximum": 60},
+      "mean_delta_c": {"minimum": -1, "maximum": 5},
+      "hotspot_within": {"x": 25, "y": 15, "width": 10, "height": 10}
+    }
+  }]
+}

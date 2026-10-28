@@ -1,10 +1,15 @@
 # Lab Instruments
 
-Local **0.10.0** adds [saved SDL measurement assertions](docs/load-checks.md):
+Local **0.11.0** adds [saved thermal ROI assertions](docs/thermal-checks.md):
+apparent surface temperature bounds, hotspot regions and qualified temperature
+deltas, with complete raw-frame recomputation and JUnit. Explicit invalid-pixel
+budgets and unavailable trend evidence remain errors. No camera is opened.
+
+It retains **0.10.0** [saved SDL measurement assertions](docs/load-checks.md):
 voltage/current/power ranges, exact input state and phase windows, raw-command
 replay, full report recomputation and JUnit. Failed sources keep invalid-evidence
 errors and recorded cleanup; sequential queries do not become simultaneous
-measurements or energy estimates. The published 0.9 release remains available.
+measurements or energy estimates. Published 0.10 remains available separately.
 
 It retains [saved report verification and JUnit export](docs/logic-reports.md).
 Both recompute every assertion from explicit hash-bound original inputs; JUnit

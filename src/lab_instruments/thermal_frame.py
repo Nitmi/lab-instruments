@@ -120,7 +120,7 @@ def telemetry(raw):
     return values
 
 
-def analyze(raw, controls, rois):
+def analyze(raw, controls, rois, *, include_csv=True):
     values = state(controls)
     telem = telemetry(raw)
     require(
@@ -163,9 +163,14 @@ def analyze(raw, controls, rois):
                 "valid_mask_sha256": digest(bytes(int(valid[i]) for i in indices)),
             }
         )
-    csv = "x,y,tlinear_code,apparent_surface_c,valid\n" + "".join(
-        f"{i % 160},{i // 160},{code},{temp:.6f},{int(ok)}\n"
-        for i, (code, temp, ok) in enumerate(zip(codes, temperatures, valid, strict=True))
+    csv = (
+        "x,y,tlinear_code,apparent_surface_c,valid\n"
+        + "".join(
+            f"{i % 160},{i // 160},{code},{temp:.6f},{int(ok)}\n"
+            for i, (code, temp, ok) in enumerate(zip(codes, temperatures, valid, strict=True))
+        )
+        if include_csv
+        else ""
     )
     return {"telemetry": telem, "controls": values, "rois": summaries}, csv.encode("ascii")
 

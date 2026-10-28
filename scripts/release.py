@@ -55,6 +55,7 @@ RUNTIME_FILES = {
         "sds_wave.py",
         "sds_wire.py",
         "thermal.py",
+        "thermal_checks.py",
         "thermal_frame.py",
         "thermal_plan.py",
         "waveform.py",

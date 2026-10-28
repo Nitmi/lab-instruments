@@ -16,7 +16,7 @@ from .scpi import QUERIES, WRITES, boolean, numeric
 
 SPEC = "lab-instruments.load-check-spec.v1"
 REPORT = "lab-instruments.load-check-report.v1"
-PRODUCERS = ("0.10.0",)
+PRODUCERS = ("0.10.0", "0.11.0")
 QUANTITIES = ("voltage_v", "current_a", "power_w")
 METRICS = tuple(
     f"{stat}_{quantity}" for quantity in QUANTITIES for stat in ("minimum", "maximum", "mean")

@@ -17,7 +17,7 @@ from .sds_wave import descriptor, voltage_samples
 
 SPEC = "lab-instruments.waveform-check-spec.v1"
 REPORT = "lab-instruments.waveform-check-report.v1"
-PRODUCERS = ("0.9.0", "0.10.0")  # Identical v1 voltage/recomputation semantics.
+PRODUCERS = ("0.9.0", "0.10.0", "0.11.0")  # Identical v1 voltage/recomputation semantics.
 METRICS = ("minimum_v", "maximum_v", "mean_v", "peak_to_peak_v", "rms_v", "ac_rms_v")
 FLAGS = {
     key: False
